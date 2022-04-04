@@ -53,10 +53,16 @@ function reloadMessages():
         set {guilds::messages::help-commands::*} to yaml list "help-commands" from "guilds.messages"
     unload yaml "guilds.messages"
 
+function formattedText(value: text) :: text:
+    set {_msg} to {guilds::messages::%{_value}%}
+    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+    replace all "{MAX-TAG-LENGTH}" with {guilds::config::min-tag-length} in {_msg}
+    return {_msg}
+
 on load:
     if yaml file "plugins/guilds/config.yml" doesn't exist:
         load yaml "plugins/guilds/config.yml" as "guilds.config"
-        set yaml value "chat-prefix" from "guilds.config" to "✦"
+        set yaml value "chat-prefix" from "guilds.config" to "&8✦"
         set the comments of yaml node "chat-prefix" from "guilds.config" to "Jak na chacie ma wyglądać prefix przed wiadomościami?"
         set yaml value "min-tag-length" from "guilds.config" to 2
         set the comments of yaml node "min-tag-length" from "guilds.config" to "Ile minimalnie musi zawierać tag gildii?"
@@ -72,6 +78,9 @@ on load:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
         set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
+        set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
+        set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##"
+        set yaml value "min-tag-length" from "guilds.messages" to "{PREFIX} &cTag gildii musi zawierać przynajmniej {MAX-TAG-LENGTH} znaki!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -87,10 +96,10 @@ command /g [<text>] [<text>] [<text>]:
             stop
         if arg-1 is "zaloz":
             if arg-2 is not set:
-                send "%{guilds::config::chat-prefix}% &cPodaj tag gildii!"
+                send formattedText("no-tag-argument")
                 stop
             if length of arg-2 < {guilds::config::min-tag-length}:
-                send "%{guilds::config::chat-prefix}% &cTag gildii musi zawierać przynajmniej %{guilds::config::min-tag-length}% znaki!"
+                send formattedText("min-tag-length")
                 stop
             if length of arg-2 > {guilds::config::max-tag-length}:
                 send "%{guilds::config::chat-prefix}% &cTag gildii nie może zawierać więcej niż %{guilds::config::max-tag-length}% znaki!"
