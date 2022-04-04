@@ -46,6 +46,13 @@ function reloadConfig():
         set {guilds::config::%loop-value%} to yaml value loop-value from "guilds.config"
     unload yaml "guilds.config"
 
+function reloadMessages():
+    load yaml "plugins/guilds/messages.yml" as "guilds.messages"
+    loop all node from "guilds.messages":
+        set {guilds::messages::%loop-value%} to yaml value loop-value from "guilds.messages"
+        set {guilds::messages::help-commands::*} to yaml list "help-commands" from "guilds.messages"
+    unload yaml "guilds.messages"
+
 on load:
     if yaml file "plugins/guilds/config.yml" doesn't exist:
         load yaml "plugins/guilds/config.yml" as "guilds.config"
@@ -61,13 +68,22 @@ on load:
         set the comments of yaml node "max-name-length" from "guilds.config" to "Ile maksymalnie może zawierać zanków tag gildii?"
         save yaml "guilds.config"
         unload yaml "guilds.config"
+    if yaml file "plugins/guilds/messages.yml" doesn't exist:
+        load yaml "plugins/guilds/messages.yml" as "guilds.messages"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie"
+        set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
+        save yaml "guilds.messages"
+        unload yaml "guilds.messages"
     reloadConfig()
+    reloadMessages()
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
         if arg-1 is not set:
-            send "%{guilds::config::chat-prefix}% &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r %{guilds::config::chat-prefix}%"
-            send "%{guilds::config::chat-prefix}% &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie"
+            loop {guilds::messages::help-commands::*}:
+                set {_msg} to coloured loop-value
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg}
             stop
         if arg-1 is "zaloz":
             if arg-2 is not set:
@@ -127,5 +143,6 @@ command /ga [<text>]:
             stop
         if arg-1 is "reload":
             reloadConfig()
+            reloadMessages()
             send "%{guilds::config::chat-prefix}% &aPrzeładowano &2skGuilds &apomyślnie!"
             stop
