@@ -40,6 +40,12 @@ on join:
         save yaml "%player%.player"
         unload yaml "%player%.player"
 
+function reloadConfig():
+    load yaml "plugins/guilds/config.yml" as "guilds.config"
+    loop all node from "guilds.config":
+        set {guilds::config::%loop-value%} to yaml value loop-value from "guilds.config"
+    unload yaml "guilds.config"
+
 on load:
     if yaml file "plugins/guilds/config.yml" doesn't exist:
         load yaml "plugins/guilds/config.yml" as "guilds.config"
@@ -55,10 +61,7 @@ on load:
         set the comments of yaml node "max-name-length" from "guilds.config" to "Ile maksymalnie może zawierać zanków tag gildii?"
         save yaml "guilds.config"
         unload yaml "guilds.config"
-    load yaml "plugins/guilds/config.yml" as "guilds.config"
-    loop all node from "guilds.config":
-        set {guilds::config::%loop-value%} to yaml value loop-value from "guilds.config"
-    unload yaml "guilds.config"
+    reloadConfig()
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
@@ -112,4 +115,17 @@ command /g [<text>] [<text>] [<text>]:
             unload yaml "%player's name%.player"
             #ogłos założenie gildii
             broadcast "%{guilds::config::chat-prefix}% &7Gracz &3%player's name% &7założył gildie o tagu &3%arg-2% &7i nazwie &3%arg-3%"
+            stop
+
+command /ga [<text>]:
+    permission: ga.usage
+    permission message: &8✦ &cNie masz dostępu do tej komendy!
+    trigger:
+        if arg-1 is not set:
+            send "%{guilds::config::chat-prefix}% &7Pomoc dotycząca ga"
+            send "%{guilds::config::chat-prefix}% &c/ga reload &8- &7przeładowuje plik konfiguracyjny"
+            stop
+        if arg-1 is "reload":
+            reloadConfig()
+            send "%{guilds::config::chat-prefix}% &aPrzeładowano &2skGuilds &apomyślnie!"
             stop
