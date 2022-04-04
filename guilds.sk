@@ -40,42 +40,62 @@ on join:
         save yaml "%player%.player"
         unload yaml "%player%.player"
 
+on load:
+    if yaml file "plugins/guilds/config.yml" doesn't exist:
+        load yaml "plugins/guilds/config.yml" as "guilds.config"
+        set yaml value "chat-prefix" from "guilds.config" to "✦"
+        set the comments of yaml node "chat-prefix" from "guilds.config" to "Jak na chacie ma wyglądać prefix przed wiadomościami?"
+        set yaml value "min-tag-length" from "guilds.config" to 2
+        set the comments of yaml node "min-tag-length" from "guilds.config" to "Ile minimalnie musi zawierać tag gildii?"
+        set yaml value "max-tag-length" from "guilds.config" to 5
+        set the comments of yaml node "max-tag-length" from "guilds.config" to "Ile maksymalnie może mieć znaków tag gildii?"
+        set yaml value "min-name-length" from "guilds.config" to 5
+        set the comments of yaml node "min-name-length" from "guilds.config" to "Ile minimalnie musi zawierać nazwa gildii?"
+        set yaml value "max-name-length" from "guilds.config" to 15
+        set the comments of yaml node "max-name-length" from "guilds.config" to "Ile maksymalnie może zawierać zanków tag gildii?"
+        save yaml "guilds.config"
+        unload yaml "guilds.config"
+    load yaml "plugins/guilds/config.yml" as "guilds.config"
+    loop all node from "guilds.config":
+        set {guilds::config::%loop-value%} to yaml value loop-value from "guilds.config"
+    unload yaml "guilds.config"
+
 command /g [<text>] [<text>] [<text>]:
     trigger:
         if arg-1 is not set:
-            send "&8✦ &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r &8✦"
-            send "&8✦ &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie!"
+            send "%{guilds::config::chat-prefix}% &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r %{guilds::config::chat-prefix}%"
+            send "%{guilds::config::chat-prefix}% &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie"
             stop
         if arg-1 is "zaloz":
             if arg-2 is not set:
-                send "&8✦ &cPodaj tag gildii!"
+                send "%{guilds::config::chat-prefix}% &cPodaj tag gildii!"
                 stop
-            if length of arg-2 < 2:
-                send "&8✦ &cTag gildii musi zawierać przynajmniej 2 znaki!"
+            if length of arg-2 < {guilds::config::min-tag-length}:
+                send "%{guilds::config::chat-prefix}% &cTag gildii musi zawierać przynajmniej %{guilds::config::min-tag-length}% znaki!"
                 stop
-            if length of arg-2 > 5:
-                send "&8✦ &cTag gildii nie może zawierać więcej niż 5 znaki!"
+            if length of arg-2 > {guilds::config::max-tag-length}:
+                send "%{guilds::config::chat-prefix}% &cTag gildii nie może zawierać więcej niż %{guilds::config::max-tag-length}% znaki!"
                 stop
             if arg-3 is not set:
-                send "&8✦ &cPodaj nazwę gildii!"
+                send "%{guilds::config::chat-prefix}% &cPodaj nazwę gildii!"
                 stop
-            if length of arg-3 < 5:
-                send "&8✦ &cNazwa gildii musi zawierać przynajmniej 5 znaków!"
+            if length of arg-3 < {guilds::config::min-name-length}:
+                send "%{guilds::config::chat-prefix}% &cNazwa gildii musi zawierać przynajmniej %{guilds::config::min-name-length}% znaków!"
                 stop
-            if length of arg-3 > 15:
-                send "&8✦ &cNazwa gildii nie może zawierać więcej niż 15 znaków!"
+            if length of arg-3 > {guilds::config::max-name-length}:
+                send "%{guilds::config::chat-prefix}% &cNazwa gildii nie może zawierać więcej niż %{guilds::config::max-name-length}% znaków!"
                 stop
             #sprawdz czy gracz jest w gildii
             if player has guild is true:
-                send "&8✦ &cJesteś już w gildii!"
+                send "%{guilds::config::chat-prefix}% &cJesteś już w gildii!"
                 stop
             #sprawdz czy gildia o podanym tagu nie istnieje
             if guild tag arg-2 exists is true:
-                send "&8✦ &cGildia o podanym tagu istnieje!"
+                send "%{guilds::config::chat-prefix}% &cGildia o podanym tagu istnieje!"
                 stop
             #sprawdz czy gildia o podanej nazwie nie istnieje
             if guild name arg-3 exists is true:
-                send "&8✦ &cGildia o podanej nazwie istnieje!" 
+                send "%{guilds::config::chat-prefix}% &cGildia o podanej nazwie istnieje!" 
             #sprawdz czy gracz może w tym miejscu założyć gildię
             #załóż gildie
             load yaml "plugins/guilds/data/guilds/%arg-2%.yml" as "%arg-2%.guild"
@@ -91,5 +111,5 @@ command /g [<text>] [<text>] [<text>]:
             save yaml "%player's name%.player"
             unload yaml "%player's name%.player"
             #ogłos założenie gildii
-            broadcast "&8✦ &7Gracz &3%player's name% &7założył gildie o tagu &3%arg-2% &7i nazwie &3%arg-3%"
+            broadcast "%{guilds::config::chat-prefix}% &7Gracz &3%player's name% &7założył gildie o tagu &3%arg-2% &7i nazwie &3%arg-3%"
             stop
