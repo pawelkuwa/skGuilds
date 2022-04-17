@@ -110,6 +110,10 @@ on load:
         set yaml value "region-contain-blocked-region" from "guilds.messages" to "{PREFIX} &cNie możesz założyć w tym miejscu gildii! Znajdź inne miejsce!"
         set yaml value "region-contain-another-guild" from "guilds.messages" to "{PREFIX} &cNie możesz założyć w tym miejscu gildii! Znajdź inne miejsce!"
         set yaml value "required-item-error" from "guilds.messages" to "{PREFIX} &cNie masz {ITEM}, aby założyć gildię!"
+        set yaml value "player-hasnt-guild" from "guilds.messages" to "{PREFIX} &cNie masz żadnej gildii!"
+        set the comments of yaml node "player-hasnt-guild" from "guilds.messages" to "##########################" and "##########################" and "##USUWANIE GILDII##" and "##Zmienne: {PREFIX}, {PLAYER}, {TAG}, {NAME}"
+        set yaml value "player-isnt-owner" from "guilds.messages" to "{PREFIX} &cNie jesteś liderem gildii!"
+        set yaml value "broadcast-guild-delete" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7usunął gildię &3{TAG}"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -296,6 +300,47 @@ command /g [<text>] [<text>] [<text>]:
             replace all "{TAG}" with arg-2 in {_msg}
             replace all "{NAME}" with arg-3 in {_msg}
             broadcast {_msg}
+            stop
+        if arg-1 is "usun":
+            #sprawdz czy gracz ma gildie
+            if player has guild is false:
+                set {_msg} to {guilds::messages::player-hasnt-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            set {_g} to player guild tag
+            set {_owner} to false
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_name} to yaml value "name" from "%{_g}%.guild"
+            if yaml value "owner" from "%{_g}%.guild" is "%player%":
+                set {_owner} to true
+            unload yaml "%{_g}%.guild"
+            if {_owner} is false:
+                set {_msg} to {guilds::messages::player-isnt-owner}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            execute console command "rg remove guild-%{_g}% -w %player's world%"
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_members::*} to yaml list "members" from "%{_g}%.guild"
+            loop {_members::*}:
+                load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
+                set yaml value "guild" from "%loop-value%.player" to "brak"
+                save yaml "%loop-value%.player"
+                unload yaml "%loop-value%.player"
+                set {_p} to loop-value parsed as player
+                if {_p} is online:
+                    execute console command "tab player %{_p}% belowname"
+            unload yaml "%{_g}%.guild"
+            set {_msg} to {guilds::messages::broadcast-guild-delete}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+            replace all "{PLAYER}" with "%player%" in {_msg}
+            replace all "{TAG}" with {_g} in {_msg}
+            replace all "{NAME}" with {_name} in {_msg}
+            broadcast {_msg}
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            delete yaml "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
             stop
         if arg-1 is "itemy":
             close player's inventory
