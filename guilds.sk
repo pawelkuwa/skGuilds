@@ -30,6 +30,14 @@ expression guild name %text% exists:
             unload loop-value
         return {_return}
 
+expression %player% guild tag:
+    return type: text
+    get:
+        load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
+        set {_return} to yaml value "guild" from "%expression-1%.player"
+        unload yaml "%expression-1%.player"
+        return {_return}
+
 on join:
     if yaml file "plugins/guilds/data/players/%player%.yml" doesn't exist:
         load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
@@ -39,11 +47,19 @@ on join:
         set yaml value "deaths" from "%player%.player" to 0
         save yaml "%player%.player"
         unload yaml "%player%.player"
+    execute console command "tab player %player% belowname"
+    if player guild tag is not "brak":
+        set {_g} to player guild tag
+        set {_format} to {guilds::config::belowname-tag-format}
+        replace all "{TAG}" with {_g} in {_format}
+        execute console command "tab player %player% belowname %{_format}%"
 
 function reloadConfig():
     load yaml "plugins/guilds/config.yml" as "guilds.config"
     loop all node from "guilds.config":
         set {guilds::config::%loop-value%} to yaml value loop-value from "guilds.config"
+        set {guilds::config::blocked-regions::*} to yaml list "blocked-regions" from "guilds.config"
+        set {guilds::config::required-items::*} to yaml list "required-items" from "guilds.config"
     unload yaml "guilds.config"
 
 function reloadMessages():
@@ -52,12 +68,6 @@ function reloadMessages():
         set {guilds::messages::%loop-value%} to yaml value loop-value from "guilds.messages"
         set {guilds::messages::help-commands::*} to yaml list "help-commands" from "guilds.messages"
     unload yaml "guilds.messages"
-
-function formattedText(value: text) :: text:
-    set {_msg} to {guilds::messages::%{_value}%}
-    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
-    replace all "{MAX-TAG-LENGTH}" with {guilds::config::min-tag-length} in {_msg}
-    return {_msg}
 
 on load:
     if yaml file "plugins/guilds/config.yml" doesn't exist:
@@ -72,15 +82,34 @@ on load:
         set the comments of yaml node "min-name-length" from "guilds.config" to "Ile minimalnie musi zawierać nazwa gildii?"
         set yaml value "max-name-length" from "guilds.config" to 15
         set the comments of yaml node "max-name-length" from "guilds.config" to "Ile maksymalnie może zawierać zanków tag gildii?"
+        set yaml value "belowname-tag-format" from "guilds.config" to "&8[&c{TAG}&8]"
+        set the comments of yaml node "belowname-tag-format" from "guilds.config" to "Jak ma wyglądać tag pod nickiem gracza? Zmienna: {TAG} - określa tag gildii"
+        set yaml list "blocked-regions" from "guilds.config" to "spawn" and "build"
+        set the comments of yaml node "blocked-regions" from "guilds.config" to "Przy jakich regionach nie można tworzyć gildii?" and "Jeżeli ta opcja ma być wyłączona wpisz: none (jako pierwszą z wartości)"
+        set yaml list "required-items" from "guilds.config" to "3 gold ingot" and "1 diamond"
+        set the comments of yaml node "required-items" from "guilds.config" to "Jakie są wymagane przedmioty do stworzenia gildii?" and "Jeżeli ta opcja ma być wyłączona wpisz: none (jako pierwszą z wartości)"
+        set yaml value "required-items-gui-name" from "guilds.config" to "{PREFIX} &3Przedmioty na gildie"
+        set the comments of yaml node "required-items-gui-name" from "guilds.config" to "Jak ma wyglądać tytuł GUI dla przedmiotów na gildię?"
         save yaml "guilds.config"
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
-        set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##"
-        set yaml value "min-tag-length" from "guilds.messages" to "{PREFIX} &cTag gildii musi zawierać przynajmniej {MAX-TAG-LENGTH} znaki!"
+        set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
+        set yaml value "min-tag-length" from "guilds.messages" to "{PREFIX} &cTag gildii musi zawierać przynajmniej {MIN-TAG-LENGTH} znaki!"
+        set yaml value "max-tag-length" from "guilds.messages" to "{PREFIX} &cTag gildii nie może zawierać więcej niż {MAX-TAG-LENGTH} znaki!"
+        set yaml value "no-name-argument" from "guilds.messages" to "{PREFIX} &cPodaj nazwę gildii!"
+        set yaml value "min-name-length" from "guilds.messages" to "{PREFIX} &cNazwa gildii musi zawierać przynajmniej {MIN-NAME-LENGTH} znaków!"
+        set yaml value "max-name-length" from "guilds.messages" to "{PREFIX} &cNazwa gildii nie może zawierać więcej niż {MAX-NAME-LENGTH} znaków!"
+        set yaml value "player-is-in-guild" from "guilds.messages" to "{PREFIX} &cJesteś już w gildii!"
+        set yaml value "guild-tag-exists" from "guilds.messages" to "{PREFIX} &cGildia o podanym tagu istnieje!"
+        set yaml value "guild-name-exists" from "guilds.messages" to "{PREFIX} &cGildia o podanej nazwie istnieje!"
+        set yaml value "broadcast-guild-create" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7założył gildie o tagu &3{TAG} &7i nazwie &3{NAME}"
+        set yaml value "region-contain-blocked-region" from "guilds.messages" to "{PREFIX} &cNie możesz założyć w tym miejscu gildii! Znajdź inne miejsce!"
+        set yaml value "region-contain-another-guild" from "guilds.messages" to "{PREFIX} &cNie możesz założyć w tym miejscu gildii! Znajdź inne miejsce!"
+        set yaml value "required-item-error" from "guilds.messages" to "{PREFIX} &cNie masz {ITEM}, aby założyć gildię!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -96,35 +125,153 @@ command /g [<text>] [<text>] [<text>]:
             stop
         if arg-1 is "zaloz":
             if arg-2 is not set:
-                send formattedText("no-tag-argument")
+                set {_msg} to {guilds::messages::no-tag-argument}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
                 stop
             if length of arg-2 < {guilds::config::min-tag-length}:
-                send formattedText("min-tag-length")
+                set {_msg} to {guilds::messages::min-tag-length}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{MIN-TAG-LENGTH}" with "%{guilds::config::min-tag-length}%" in {_msg}
+                send {_msg} to player
                 stop
             if length of arg-2 > {guilds::config::max-tag-length}:
-                send "%{guilds::config::chat-prefix}% &cTag gildii nie może zawierać więcej niż %{guilds::config::max-tag-length}% znaki!"
+                set {_msg} to {guilds::messages::max-tag-length}
+                replace all "{MAX-TAG-LENGTH}" with {guilds::config::max-tag-length} in {_msg}
+                send {_msg} to player
                 stop
             if arg-3 is not set:
-                send "%{guilds::config::chat-prefix}% &cPodaj nazwę gildii!"
+                set {_msg} to {guilds::messages::no-name-argument}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
                 stop
             if length of arg-3 < {guilds::config::min-name-length}:
-                send "%{guilds::config::chat-prefix}% &cNazwa gildii musi zawierać przynajmniej %{guilds::config::min-name-length}% znaków!"
+                set {_msg} to {guilds::messages::min-name-length}
+                replace all "{MIN-NAME-LENGTH}" with {guilds::config::min-name-length} in {_msg}
+                send {_msg} to player
                 stop
             if length of arg-3 > {guilds::config::max-name-length}:
-                send "%{guilds::config::chat-prefix}% &cNazwa gildii nie może zawierać więcej niż %{guilds::config::max-name-length}% znaków!"
+                set {_msg} to {guilds::messages::max-name-length}
+                replace all "{MIN-NAME-LENGTH}" with {guilds::config::max-name-length} in {_msg}
+                send {_msg} to player
                 stop
             #sprawdz czy gracz jest w gildii
             if player has guild is true:
-                send "%{guilds::config::chat-prefix}% &cJesteś już w gildii!"
+                set {_msg} to {guilds::messages::player-is-in-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
                 stop
             #sprawdz czy gildia o podanym tagu nie istnieje
             if guild tag arg-2 exists is true:
-                send "%{guilds::config::chat-prefix}% &cGildia o podanym tagu istnieje!"
+                set {_msg} to {guilds::messages::guild-tag-exists}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
                 stop
             #sprawdz czy gildia o podanej nazwie nie istnieje
             if guild name arg-3 exists is true:
-                send "%{guilds::config::chat-prefix}% &cGildia o podanej nazwie istnieje!" 
+                set {_msg} to {guilds::messages::guild-name-exists}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy gracz ma przedmioty na gildię
+            if {guilds::config::required-items::1} is not "none":
+                loop {guilds::config::required-items::*}:
+                    set {_i} to loop-value parsed as itemtype
+                    if player doesn't have {_i}:
+                        set {_msg} to {guilds::messages::required-item-error}
+                        replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                        replace all "{ITEM}" with "%{_i}%" in {_msg}
+                        send {_msg} to player
+                        stop
             #sprawdz czy gracz może w tym miejscu założyć gildię
+            #stwórz obszar gildii (corners)
+            set {_1} to x-coordinate of player - 50
+            set {_2} to z-coordinate of player - 50
+            set {_c1} to location({_1}, 256, {_2})
+            set {_1} to x-coordinate of player + 50
+            set {_2} to z-coordinate of player - 50
+            set {_c2} to location({_1}, 256, {_2})
+            set {_1} to x-coordinate of player + 50
+            set {_2} to z-coordinate of player + 50
+            set {_c3} to location({_1}, -256, {_2})
+            set {_1} to x-coordinate of player - 50
+            set {_2} to z-coordinate of player + 50
+            set {_c4} to location({_1}, 256, {_2})
+            #sprawdz czy teren nie zajmie zablokowanych regionów
+            if {guilds::config::blocked-regions::1} is not "none":
+                loop {guilds::config::blocked-regions::*}:
+                    #sprawdz czy rogi gildii nie stykają się
+                    loop 4 times:
+                        if "%region at {_c%loop-value-2%}%" contains loop-value-1:
+                            set {_msg} to {guilds::messages::region-contain-blocked-region}
+                            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                            send {_msg} to player
+                            stop
+                    set {_l} to block at player's location
+                    loop 50 times:
+                        set {_b} to block loop-value-2 left of {_l}
+                        if "%region at {_b}%" contain loop-value-1:
+                            set {_msg} to {guilds::messages::region-contain-blocked-region}
+                            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                            send {_msg} to player
+                            stop
+                        set {_b} to block loop-value-2 right of {_l}
+                        if "%region at {_b}%" contain loop-value-1:
+                            set {_msg} to {guilds::messages::region-contain-blocked-region}
+                            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                            send {_msg} to player
+                            stop
+                        set {_b} to block loop-value-2 infront of {_l}
+                        if "%region at {_b}%" contain loop-value-1:
+                            set {_msg} to {guilds::messages::region-contain-blocked-region}
+                            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                            send {_msg} to player
+                            stop
+                        set {_b} to block loop-value-2 behind {_l}
+                        if "%region at {_b}%" contain loop-value-1:
+                            set {_msg} to {guilds::messages::region-contain-blocked-region}
+                            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                            send {_msg} to player
+                            stop
+            #sprawdz czy teren nie zetknie się z inną gildią
+            loop 4 times:
+                if "%region at {_c%loop-value%}%" contains "guild-":
+                    set {_msg} to {guilds::messages::region-contain-another-guild}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+            set {_l} to block at player's location
+            loop 50 times:
+                set {_b} to block loop-value left of {_l}
+                if "%region at {_b}%" contain "guild-":
+                    set {_msg} to {guilds::messages::region-contain-another-guild}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+                set {_b} to block loop-value right of {_l}
+                if "%region at {_b}%" contain "guild-":
+                    set {_msg} to {guilds::messages::region-contain-another-guild}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+                set {_b} to block loop-value infront of {_l}
+                if "%region at {_b}%" contain "guild-":
+                    set {_msg} to {guilds::messages::region-contain-another-guild}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+                set {_b} to block loop-value behind {_l}
+                if "%region at {_b}%" contain "guild-":
+                    set {_msg} to {guilds::messages::region-contain-another-guild}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+            #stwórz region
+            define region "guild-%arg-2%" from {_c1} to {_c3} in player's world
+            #zabierz przedmioty na gildie
+            loop {guilds::config::required-items::*}:
+                set {_i} to loop-value parsed as itemtype
+                remove {_i} from player
             #załóż gildie
             load yaml "plugins/guilds/data/guilds/%arg-2%.yml" as "%arg-2%.guild"
             set yaml value "tag" from "%arg-2%.guild" to arg-2
@@ -138,8 +285,29 @@ command /g [<text>] [<text>] [<text>]:
             set yaml value "guild" from "%player's name%.player" to arg-2
             save yaml "%player's name%.player"
             unload yaml "%player's name%.player"
+            #daj belowname
+            set {_format} to {guilds::config::belowname-tag-format}
+            replace all "{TAG}" with arg-2 in {_format}
+            execute console command "tab player %player% belowname %{_format}%"
             #ogłos założenie gildii
-            broadcast "%{guilds::config::chat-prefix}% &7Gracz &3%player's name% &7założył gildie o tagu &3%arg-2% &7i nazwie &3%arg-3%"
+            set {_msg} to {guilds::messages::broadcast-guild-create}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+            replace all "{PLAYER}" with player's name in {_msg}
+            replace all "{TAG}" with arg-2 in {_msg}
+            replace all "{NAME}" with arg-3 in {_msg}
+            broadcast {_msg}
+            stop
+        if arg-1 is "itemy":
+            close player's inventory
+            set {_guiName} to {guilds::config::required-items-gui-name}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_guiName}
+            set {_rows} to size of {guilds::config::required-items::*}
+            set {_rows} to rounded up {_rows} / 9
+            open chest inventory with {_rows} rows named {_guiName} to player
+            set {_slot} to 0
+            loop {guilds::config::required-items::*}:
+                set slot {_slot} of player's current inventory to loop-value parsed as itemtype
+                add 1 to {_slot}
             stop
 
 command /ga [<text>]:
@@ -155,3 +323,10 @@ command /ga [<text>]:
             reloadMessages()
             send "%{guilds::config::chat-prefix}% &aPrzeładowano &2skGuilds &apomyślnie!"
             stop
+
+on inventory click:
+    set {_guiName} to {guilds::config::required-items-gui-name}
+    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_guiName}
+    if name of player's current inventory is {_guiName}:
+        if clicked inventory is not player's inventory:
+            cancel event
