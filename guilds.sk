@@ -67,6 +67,7 @@ function reloadMessages():
     loop all node from "guilds.messages":
         set {guilds::messages::%loop-value%} to yaml value loop-value from "guilds.messages"
         set {guilds::messages::help-commands::*} to yaml list "help-commands" from "guilds.messages"
+        set {guilds::messages::guild-info-message::*} to yaml list "guild-info-message" from "guilds.messages"
     unload yaml "guilds.messages"
 
 on load:
@@ -94,7 +95,7 @@ on load:
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
         set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
@@ -114,6 +115,10 @@ on load:
         set the comments of yaml node "player-hasnt-guild" from "guilds.messages" to "##########################" and "##########################" and "##USUWANIE GILDII##" and "##Zmienne: {PREFIX}, {PLAYER}, {TAG}, {NAME}"
         set yaml value "player-isnt-owner" from "guilds.messages" to "{PREFIX} &cNie jesteś liderem gildii!"
         set yaml value "broadcast-guild-delete" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7usunął gildię &3{TAG}"
+        set yaml value "no-info-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
+        set the comments of yaml node "no-info-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##SPRAWDZANIE INFORMACJI O GILDII##" and "##Zmienne: {PREFIX}"
+        set yaml value "guild-info-doesnt-exists" from "guilds.messages" to "{PREFIX} &cGildia o podanym tagu nie istnieje!"
+        set yaml list "guild-info-message" from "guilds.messages" to "{PREFIX} &7Informacje o gildii: &3{TAG} {PREFIX}" and "{PREFIX} &7TAG: &3{TAG}" and "{PREFIX} &7Nazwa: &3{NAME}" and "{PREFIX} &7Lider: &3{OWNER}" and "{PREFIX} &7Członkowie &8(&3{ONLINE-MEMBERS} online&8): &3{MEMBERS}"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -353,6 +358,48 @@ command /g [<text>] [<text>] [<text>]:
             loop {guilds::config::required-items::*}:
                 set slot {_slot} of player's current inventory to loop-value parsed as itemtype
                 add 1 to {_slot}
+            stop
+        if arg-1 is "info":
+            if arg-2 is not set:
+                if player guild tag is "brak":
+                    set {_msg} to {guilds::messages::no-info-tag-argument}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+                else:
+                    set {_g} to player guild tag
+            else:
+                set {_g} to arg-2
+                # sprawdz czy gildia istnieje
+                if guild tag {_g} exists is false:
+                    set {_msg} to {guilds::messages::guild-info-doesnt-exists}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+            # pobierz informacje o gildii
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_tag} to yaml value "tag" from "%{_g}%.guild"
+            set {_name} to yaml value "name" from "%{_g}%.guild"
+            set {_owner} to yaml value "owner" from "%{_g}%.guild"
+            set {_members::*} to yaml list "members" from "%{_g}%.guild"
+            loop {_members::*}:
+                set {_p} to loop-value parsed as player
+                if {_p} is online:
+                    add {_p} to {_onlineMembers::*}
+            unload yaml "%{_g}%.guild"
+            # wyswietl inforamcje o gildii
+            loop {guilds::messages::guild-info-message::*}:
+                set {_msg} to coloured loop-value
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{TAG}" with {_tag} in {_msg}
+                replace all "{NAME}" with {_name} in {_msg}
+                replace all "{OWNER}" with {_owner} in {_msg}
+                set {_onlineMembersCount} to size of {_onlineMembers::*}
+                replace all "{ONLINE-MEMBERS}" with "%{_onlineMembersCount}%" in {_msg}
+                set {_members} to "%{_members::*}%"
+                replace all " and " with ", " in {_members}
+                replace all "{MEMBERS}" with {_members} in {_msg}
+                send {_msg} to player
             stop
 
 command /ga [<text>]:
