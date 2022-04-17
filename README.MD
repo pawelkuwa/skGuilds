@@ -1,4 +1,4 @@
-Wymagane pluginy: skript-reflect, skript-yaml
+Wymagane pluginy: skript-reflect, skript-yaml, ShoSK, TAB
 
 Składnia:
 
