@@ -182,7 +182,7 @@ command /g [<text>] [<text>] [<text>]:
             if length of arg-2 > {guilds::config::max-tag-length}:
                 set {_msg} to {guilds::messages::max-tag-length}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
-                replace all "{MAX-TAG-LENGTH}" with {guilds::config::max-tag-length} in {_msg}
+                replace all "{MAX-TAG-LENGTH}" with "%{guilds::config::max-tag-length}%" in {_msg}
                 send {_msg} to player
                 stop
             if arg-3 is not set:
@@ -193,13 +193,13 @@ command /g [<text>] [<text>] [<text>]:
             if length of arg-3 < {guilds::config::min-name-length}:
                 set {_msg} to {guilds::messages::min-name-length}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
-                replace all "{MIN-NAME-LENGTH}" with {guilds::config::min-name-length} in {_msg}
+                replace all "{MIN-NAME-LENGTH}" with "%{guilds::config::min-name-length}%" in {_msg}
                 send {_msg} to player
                 stop
             if length of arg-3 > {guilds::config::max-name-length}:
                 set {_msg} to {guilds::messages::max-name-length}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
-                replace all "{MIN-NAME-LENGTH}" with {guilds::config::max-name-length} in {_msg}
+                replace all "{MAX-NAME-LENGTH}" with "%{guilds::config::max-name-length}%" in {_msg}
                 send {_msg} to player
                 stop
             #sprawdz czy gracz jest w gildii
