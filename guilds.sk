@@ -116,9 +116,9 @@ on load:
         set yaml value "player-isnt-owner" from "guilds.messages" to "{PREFIX} &cNie jesteś liderem gildii!"
         set yaml value "broadcast-guild-delete" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7usunął gildię &3{TAG}"
         set yaml value "no-info-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
-        set the comments of yaml node "no-info-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##SPRAWDZANIE INFORMACJI O GILDII##" and "##Zmienne: {PREFIX}, {TAG}, {NAME}, {OWNER}, {MEMBERS}, {ONLINE-MEMBERS}"
+        set the comments of yaml node "no-info-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##SPRAWDZANIE INFORMACJI O GILDII##" and "##Zmienne: {PREFIX}, {TAG}, {NAME}, {OWNER}, {MEMBERS}, {ONLINE-MEMBERS}, {DEPUTIES}"
         set yaml value "guild-info-doesnt-exists" from "guilds.messages" to "{PREFIX} &cGildia o podanym tagu nie istnieje!"
-        set yaml list "guild-info-message" from "guilds.messages" to "{PREFIX} &7Informacje o gildii: &3{TAG} {PREFIX}" and "{PREFIX} &7TAG: &3{TAG}" and "{PREFIX} &7Nazwa: &3{NAME}" and "{PREFIX} &7Lider: &3{OWNER}" and "{PREFIX} &7Członkowie &8(&3{ONLINE-MEMBERS} online&8): &3{MEMBERS}"
+        set yaml list "guild-info-message" from "guilds.messages" to "{PREFIX} &7Informacje o gildii: &3{TAG} {PREFIX}" and "{PREFIX} &7TAG: &3{TAG}" and "{PREFIX} &7Nazwa: &3{NAME}" and "{PREFIX} &7Lider: &3{OWNER}" and "{PREFIX} &7Zastępcy: &3{DEPUTIES}" and "{PREFIX} &7Członkowie &8(&3{ONLINE-MEMBERS} online&8): &3{MEMBERS}"
         set yaml value "player-invite-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
         set the comments of yaml node "player-invite-doesnt-have-guild" from "guilds.messages" to "##########################" and "##########################" and "##ZAPRASZANIE DO GILDII##" and "##Zmienne: {PREFIX}, {TAG}, {PLAYER}"
         set yaml value "player-invite-isnt-owner" from "guilds.messages" to "{PREFIX} &cNie jesteś liderem gildii"
@@ -136,6 +136,17 @@ on load:
         set yaml value "join-argument-guild-doesnt-exists" from "guilds.messages" to "{PREFIX} &cPodana gildia nie istnieje!"
         set yaml value "join-player-arent-invited" from "guilds.messages" to "{PREFIX} &cNie masz zaproszenia do gildii {TAG}!"
         set yaml value "broadcast-join-message" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7dołączył do gildii &3{TAG}&7!"
+        set yaml value "deputies-no-guild-executor" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
+        set the comments of yaml node "deputies-no-guild-executor" from "guilds.messages" to "##########################" and "##########################" and "##DAWANIE ZASTĘPCY##" and "##Zmienne: {PREFIX}, {PLAYER}, {TAG}"
+        set yaml value "deputies-no-owner-rank" from "guilds.messages" to "{PREFIX} &cNie jesteś liderem gildii!"
+        set yaml value "deputies-no-player-argument" from "guilds.messages" to "{PREFIX} &cPodaj nick gracza!"
+        set yaml value "deputies-argument-player-no-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz nie należy do żadnej gildii!"
+        set yaml value "deputies-argument-player-is-in-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz należy do innej gildii!"
+        set yaml value "deputies-argument-player-are-executor" from "guilds.messages" to "{PREFIX} &cNie możesz mianować siebie samego jako zastępcę!"
+        set yaml value "deputies-argument-player-removed-from-deputies" from "guilds.messages" to "{PREFIX} &7Odebrałeś graczowi &3{PLAYER} &7zastępcę w gildii &3{TAG}&7!"
+        set yaml value "deputies-argument-player-removed-from-deputies-target" from "guilds.messages" to "{PREFIX} &7Nie jesteś już zastępcą w gildii &3{TAG}&7!"
+        set yaml value "deputies-argument-player-got-deputy" from "guilds.messages" to "{PREFIX} &7Nadałeś graczowi &3{PLAYER} &7zastępcę w gildii &3{TAG}&7!"
+        set yaml value "deputies-argument-player-got-deputy-target" from "guilds.messages" to "{PREFIX} &7Otrzymałeś zastępcę w gildii &3{TAG}&7!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -304,6 +315,7 @@ command /g [<text>] [<text>] [<text>]:
             set yaml value "name" from "%arg-2%.guild" to arg-3
             set yaml value "owner" from "%arg-2%.guild" to player's name
             set yaml list "members" from "%arg-2%.guild" to player's name
+            set yaml list "deputies" from "%arg-2%.guild" to "none"
             save yaml "%arg-2%.guild"
             unload yaml "%arg-2%.guild"
             #ustaw graczowi gildie
@@ -399,6 +411,7 @@ command /g [<text>] [<text>] [<text>]:
             set {_name} to yaml value "name" from "%{_g}%.guild"
             set {_owner} to yaml value "owner" from "%{_g}%.guild"
             set {_members::*} to yaml list "members" from "%{_g}%.guild"
+            set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
             loop {_members::*}:
                 set {_p} to loop-value parsed as player
                 if {_p} is online:
@@ -416,6 +429,12 @@ command /g [<text>] [<text>] [<text>]:
                 set {_members} to "%{_members::*}%"
                 replace all " and " with ", " in {_members}
                 replace all "{MEMBERS}" with {_members} in {_msg}
+                if {_deputies::1} is not "none":
+                    set {_deputies} to "%{_deputies::*}%"
+                    replace all " and " with ", " in {_deputies}
+                else:
+                    set {_deputies} to "brak"
+                replace all "{DEPUTIES}" with {_deputies} in {_msg}
                 send {_msg} to player
             stop
         if arg-1 is "zapros":
@@ -562,6 +581,100 @@ command /g [<text>] [<text>] [<text>]:
             replace all "{PLAYER}" with "%player%" in {_msg}
             replace all "{TAG}" with arg-2 in {_msg}
             broadcast {_msg}
+            stop
+        if arg-1 is "zastepca":
+            #sprawdz czy executor jest w gildii - passed
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set {_g} to yaml value "guild" from "%player%.player"
+            unload yaml "%player%.player"
+            if {_g} is "brak":
+                set {_msg} to {guilds::messages::deputies-no-guild-executor}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy executor jest liderem - passed
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_owner} to yaml value "owner" from "%{_g}%.guild"
+            set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
+            if {_owner} is not player's name:
+                set {_msg} to {guilds::messages::deputies-no-owner-rank}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy executor podal gracza - passed
+            if arg-2 is not set:
+                set {_msg} to {guilds::messages::deputies-no-player-argument}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            set {_p} to arg-2 parsed as player
+            #sprawdz czy podany gracz jest w gildii - passed
+            load yaml "plugins/guilds/data/players/%{_p}%.yml" as "%{_p}%.player"
+            set {_argument-g} to yaml value "guild" from "%{_p}%.player"
+            unload yaml "%{_p}%.player"
+            if {_argument-g} is "brak":
+                set {_msg} to {guilds::messages::deputies-argument-player-no-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy sa w tej samej gildii - passed
+            if {_argument-g} is not {_g}:
+                set {_msg} to {guilds::messages::deputies-argument-player-is-in-another-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy executor podal swój nick
+            if {_p} is player's name:
+                set {_msg} to {guilds::messages::deputies-argument-player-are-executor}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            set {_return} to false
+            loop {_deputies::*}:
+                if loop-value is {_p}:
+                    set {_return} to true
+                    stop loop
+            #jest zastępcą - więc zabierz
+            if {_return} is true:
+                remove {_p} from {_deputies::*}
+                if {_deputies::*} is not set:
+                    add "none" to {_deputies::*}
+                load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+                set yaml list "deputies" from "%{_g}%.guild" to {_deputies::*}
+                save yaml "%{_g}%.guild"
+                unload yaml "%{_g}%.guild"
+                #wiadomość
+                set {_msg} to {guilds::messages::deputies-argument-player-removed-from-deputies}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{PLAYER}" with "%{_p}%" in {_msg}
+                replace all "{TAG}" with {_g} in {_msg}
+                send {_msg} to player
+                #do bylego zastepcy
+                set {_msg} to {guilds::messages::deputies-argument-player-removed-from-deputies-target}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{TAG}" with {_g} in {_msg}
+                send {_msg} to {_p}
+            #nie jest zastępcą więc dodaj
+            else:
+                if {_deputies::1} is "none":
+                    remove "none" from {_deputies::*}
+                add {_p} to {_deputies::*}
+                load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+                set yaml list "deputies" from "%{_g}%.guild" to {_deputies::*}
+                save yaml "%{_g}%.guild"
+                unload yaml "%{_g}%.guild"
+                #wiadomosc
+                set {_msg} to {guilds::messages::deputies-argument-player-got-deputy}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{PLAYER}" with "%{_p}%" in {_msg}
+                replace all "{TAG}" with {_g} in {_msg}
+                send {_msg} to player
+                #do goscia
+                set {_msg} to {guilds::messages::deputies-argument-player-got-deputy-target}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{TAG}" with {_g} in {_msg}
+                send {_msg} to {_p}
             stop
 
 command /ga [<text>]:
