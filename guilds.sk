@@ -147,6 +147,13 @@ on load:
         set yaml value "deputies-argument-player-removed-from-deputies-target" from "guilds.messages" to "{PREFIX} &7Nie jesteś już zastępcą w gildii &3{TAG}&7!"
         set yaml value "deputies-argument-player-got-deputy" from "guilds.messages" to "{PREFIX} &7Nadałeś graczowi &3{PLAYER} &7zastępcę w gildii &3{TAG}&7!"
         set yaml value "deputies-argument-player-got-deputy-target" from "guilds.messages" to "{PREFIX} &7Otrzymałeś zastępcę w gildii &3{TAG}&7!"
+        set yaml value "kick-executor-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
+        set yaml value "kick-executor-doesnt-have-permission" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucać z gildii!"
+        set yaml value "kick-no-player-argument" from "guilds.messages" to "{PREFIX} &cPodaj nick gracza!"
+        set yaml value "kick-player-argument-offline" from "guilds.messages" to "{PREFIX} &cPodany gracz jest offline!"
+        set yaml value "kick-player-argument-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz nie jest w żadnej gildii!"
+        set yaml value "kick-player-argument-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz należy do innej gildii!"
+        set yaml value "kick-player-argument-are-owner" from "guilds.messages" to "{PREFIX} &cPodany gracz jest liderem gildii!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -174,6 +181,7 @@ command /g [<text>] [<text>] [<text>]:
                 stop
             if length of arg-2 > {guilds::config::max-tag-length}:
                 set {_msg} to {guilds::messages::max-tag-length}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 replace all "{MAX-TAG-LENGTH}" with {guilds::config::max-tag-length} in {_msg}
                 send {_msg} to player
                 stop
@@ -184,11 +192,13 @@ command /g [<text>] [<text>] [<text>]:
                 stop
             if length of arg-3 < {guilds::config::min-name-length}:
                 set {_msg} to {guilds::messages::min-name-length}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 replace all "{MIN-NAME-LENGTH}" with {guilds::config::min-name-length} in {_msg}
                 send {_msg} to player
                 stop
             if length of arg-3 > {guilds::config::max-name-length}:
                 set {_msg} to {guilds::messages::max-name-length}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 replace all "{MIN-NAME-LENGTH}" with {guilds::config::max-name-length} in {_msg}
                 send {_msg} to player
                 stop
@@ -567,6 +577,7 @@ command /g [<text>] [<text>] [<text>]:
                 replace all "{TAG}" with arg-2 in {_msg}
                 send {_msg} to player
                 stop
+            remove arg-2 from {guildsData::pendingInvites::%player%::*}
             #dodaj gracza
             load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
             set yaml value "guild" from "%player%.player" to arg-2
@@ -683,6 +694,69 @@ command /g [<text>] [<text>] [<text>]:
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 replace all "{TAG}" with {_g} in {_msg}
                 send {_msg} to {_p}
+            stop
+        if arg-1 is "wyrzuc":
+            #sprawdz czy executor jest w gildii
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set {_g} to yaml value "guild" from "%player%.player"
+            unload yaml "%player%.player"
+            if {_g} is "brak":
+                set {_msg} to {guilds::messages::kick-executor-doesnt-have-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy executor moze wyrzucac
+            set {_return} to false
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_owner} to yaml value "owner" from "%{_g}%.guild"
+            set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
+            if {_owner} is player's name:
+                set {_return} to true
+            loop {_deputies::*}:
+                if loop-value is player's name:
+                    set {_return} to true
+            if {_return} is false:
+                set {_msg} to {guilds::messages::kick-executor-doesnt-have-permission}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy gracz jest podany
+            if arg-2 is not set:
+                set {_msg} to {guilds::messages::kick-no-player-argument}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            set {_p} to arg-2 parsed as player
+            #sprawdz czy podany gracz jest offline
+            if {_p} is offline:
+                set {_msg} to {guilds::messages::kick-player-argument-offline}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy podany gracz jest w gildii
+            load yaml "plugins/guilds/data/players/%{_p}%.yml" as "%{_p}%.player"
+            set {_argument-g} to yaml value "guild" from "%{_p}%.player"
+            unload yaml "%{_p}%.player"
+            if {_g} is "brak":
+                set {_msg} to {guilds::messages::kick-player-argument-doesnt-have-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy podany gracz jest w tej samej gildii
+            if {_argument-g} is not {_g}:
+                set {_msg} to {guilds::messages::kick-player-argument-another-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy podany gracz nie jest przypadkiem liderem
+            if {_p} is {_owner}:
+                set {_msg} to {guilds::messages::kick-player-argument-are-owner}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #sprawdz czy podany gracz jest w deputies
+            loop {_deputies::*} 
             stop
 
 command /ga [<text>]:
