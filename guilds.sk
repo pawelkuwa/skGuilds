@@ -95,7 +95,7 @@ on load:
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
         set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
@@ -129,6 +129,13 @@ on load:
         set yaml value "send-invite-message" from "guilds.messages" to "{PREFIX} &7Wysłałeś zaproszenie graczowi &3{PLAYER}&7!"
         set yaml value "revoked-invite-argument-player" from "guilds.messages" to "{PREFIX} &7Zaproszenie do gildii &3{TAG} &7zostało cofnięte!"
         set yaml value "revoked-invite-player" from "guilds.messages" to "{PREFIX} &7Cofnąłeś zaproszenie graczowi &3{PLAYER} &7do gildii!"
+        set yaml value "join-no-pending-invites" from "guilds.messages" to "{PREFIX} &cNie masz żadnych oczekujących zaproszeń do gildii!"
+        set the comments of yaml node "join-no-pending-invites" from "guilds.messages" to "##########################" and "##########################" and "##DOŁĄCZANIE DO GILDII##" and "##Zmienne: {PREFIX}, {GUILDS}, {TAG}"
+        set yaml value "join-pending-invites" from "guilds.messages" to "{PREFIX} &7Oczekujące zaproszenia do gildii: &3{GUILDS}"
+        set yaml value "join-player-is-in-guild" from "guilds.messages" to "{PREFIX} &cJesteś już w gildii!"
+        set yaml value "join-argument-guild-doesnt-exists" from "guilds.messages" to "{PREFIX} &cPodana gildia nie istnieje!"
+        set yaml value "join-player-arent-invited" from "guilds.messages" to "{PREFIX} &cNie masz zaproszenia do gildii {TAG}!"
+        set yaml value "broadcast-join-message" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7dołączył do gildii &3{TAG}&7!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -488,6 +495,73 @@ command /g [<text>] [<text>] [<text>]:
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 replace all "{PLAYER}" with "%{_p}%" in {_msg}
                 send {_msg} to player
+            stop
+        if arg-1 is "dolacz":
+            #sprawdz czy jest w gildii
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set {_g} to yaml value "guild" from "%player%.player"
+            unload yaml "%player%.player"
+            if {_g} is not "brak":
+                set {_msg} to {guilds::messages::join-player-is-in-guild}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            if arg-2 is not set:
+                if {guildsData::pendingInvites::%player%::*} is not set:
+                    set {_msg} to {guilds::messages::join-no-pending-invites}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+                else:
+                    set {_msg} to {guilds::messages::join-pending-invites}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    set {_guilds} to "%{guildsData::pendingInvites::%player%::*}%"
+                    replace all " and " with ", " in {_guilds}
+                    replace all "{GUILDS}" with {_guilds} in {_msg}
+                    send {_msg} to player
+                    stop
+            set {_join-g} to arg-2
+            load yaml "plugins/guilds/data/guilds/%{_join-g}%.yml" as "%{_join-g}%.guild"
+            set {_join-owner} to yaml value "owner" from "%{_join-g}%.guild"
+            unload yaml "%{_join-g}%.guild"
+            if {_join-owner} is not set:
+                set {_msg} to {guilds::messages::join-argument-guild-doesnt-exists}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            set {_return} to false
+            loop {guildsData::pendingInvites::%player%::*}:
+                if loop-value is arg-2:
+                    set {_return} to true
+                    stop loop
+            if {_return} is false:
+                set {_msg} to {guilds::messages::join-player-arent-invited}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                replace all "{TAG}" with arg-2 in {_msg}
+                send {_msg} to player
+                stop
+            #dodaj gracza
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set yaml value "guild" from "%player%.player" to arg-2
+            save yaml "%player%.player"
+            unload yaml "%player%.player"
+            #daj belowname
+            set {_format} to {guilds::config::belowname-tag-format}
+            replace all "{TAG}" with arg-2 in {_format}
+            execute console command "tab player %player% belowname %{_format}%"
+            #dodaj gracza do yml gildii
+            load yaml "plugins/guilds/data/guilds/%arg-2%.yml" as "%arg-2%.guild"
+            set {_list::*} to yaml list "members" from "%arg-2%.guild"
+            add "%player%" to {_list::*}
+            set yaml list "members" from "%arg-2%.guild" to {_list::*}
+            save yaml "%arg-2%.guild"
+            unload yaml "%arg-2%.guild"
+            #oglos
+            set {_msg} to {guilds::messages::broadcast-join-message}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+            replace all "{PLAYER}" with "%player%" in {_msg}
+            replace all "{TAG}" with arg-2 in {_msg}
+            broadcast {_msg}
             stop
 
 command /ga [<text>]:
