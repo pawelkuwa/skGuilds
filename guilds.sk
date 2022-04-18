@@ -95,7 +95,7 @@ on load:
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
         set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
@@ -121,7 +121,7 @@ on load:
         set yaml list "guild-info-message" from "guilds.messages" to "{PREFIX} &7Informacje o gildii: &3{TAG} {PREFIX}" and "{PREFIX} &7TAG: &3{TAG}" and "{PREFIX} &7Nazwa: &3{NAME}" and "{PREFIX} &7Lider: &3{OWNER}" and "{PREFIX} &7Zastępcy: &3{DEPUTIES}" and "{PREFIX} &7Członkowie &8(&3{ONLINE-MEMBERS} online&8): &3{MEMBERS}"
         set yaml value "player-invite-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
         set the comments of yaml node "player-invite-doesnt-have-guild" from "guilds.messages" to "##########################" and "##########################" and "##ZAPRASZANIE DO GILDII##" and "##Zmienne: {PREFIX}, {TAG}, {PLAYER}"
-        set yaml value "player-invite-isnt-owner" from "guilds.messages" to "{PREFIX} &cNie jesteś liderem gildii"
+        set yaml value "player-invite-cant-send" from "guilds.messages" to "{PREFIX} &cNie możesz zapraszać do gildii!"
         set yaml value "invite-no-player-argument" from "guilds.messages" to "{PREFIX} &cPodaj nick gracza!"
         set yaml value "player-is-offline" from "guilds.messages" to "{PREFIX} &cPodany gracz jest offline!"
         set yaml value "invite-player-argument-is-in-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz jest już w gildii!"
@@ -447,15 +447,23 @@ command /g [<text>] [<text>] [<text>]:
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
-            #sprawdz lidera
+            #sprawdz lidera/zastępcę
+            set {_return} to false
             load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
             set {_owner} to yaml value "owner" from "%{_g}%.guild"
+            set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
             unload yaml "%{_g}%.guild"
-            if {_owner} is not player's name:
-                set {_msg} to {guilds::messages::player-invite-isnt-owner}
+            if {_owner} is player's name:
+                set {_return} to true
+            loop {_deputies::*}:
+                if loop-value is player's name:
+                    set {_return} to true
+            if {_return} is false:
+                set {_msg} to {guilds::messages::player-invite-cant-send}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
+            #sprawdź czy podał gracza
             if arg-2 is not set:
                 set {_msg} to {guilds::messages::invite-no-player-argument}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
