@@ -250,6 +250,8 @@ on load:
         set yaml value "subtitle-region-enter" from "guilds.messages" to "{PREFIX} &7Wkroczyłeś na teren gildii &3{TAG} {PREFIX}"
         set yaml value "title-region-leave" from "guilds.messages" to "&7&lUWAGA"
         set yaml value "subtitle-region-leave" from "guilds.messages" to "{PREFIX} &7Opuściłeś teren gildii &3{TAG} {PREFIX}"
+        set yaml value "interact-region-error" from "guilds.messages" to "{PREFIX} &cNie możesz budować na terenie gildii {TAG}!"
+        set the comments of yaml node "interact-region-error" from "guilds.messages" to "##########################" and "##########################" and "##REGIONY##" and "##Zmienne: {PREFIX}, {TAG}"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -413,6 +415,7 @@ command /g [<text>] [<text>] [<text>]:
                     stop
             #stwórz region
             define region "guild-%arg-2%" from {_c1} to {_c3} in player's world
+            execute console command "rg flag guild-%arg-2% -w %player's world% build allow"
             #zabierz przedmioty na gildie
             loop {guilds::config::required-items::*}:
                 set {_i} to loop-value parsed as itemtype
@@ -976,3 +979,35 @@ on damage of player:
         unload yaml "%victim%.player"
         if {_attacker-g} is {_victim-g}:
             cancel event
+
+on place:
+    if "%region at event-block%" contain "guild-":
+        set {_region-g} to "%region at event-block%"
+        set {_r::*} to split {_region-g} at "-"
+        replace all " in world %player's world%" with "" in {_r::2}
+        set {_region-g} to {_r::2}
+        load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+        set {_g} to yaml value "guild" from "%player%.player"
+        unload yaml "%player%.player"
+        if {_region-g} is not {_g}:
+            cancel event
+            set {_msg} to {guilds::messages::interact-region-error}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+            replace all "{TAG}" with {_region-g} in {_msg}
+            send {_msg} to player
+
+on break:
+    if "%region at event-block%" contain "guild-":
+        set {_region-g} to "%region at event-block%"
+        set {_r::*} to split {_region-g} at "-"
+        replace all " in world %player's world%" with "" in {_r::2}
+        set {_region-g} to {_r::2}
+        load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+        set {_g} to yaml value "guild" from "%player%.player"
+        unload yaml "%player%.player"
+        if {_region-g} is not {_g}:
+            cancel event
+            set {_msg} to {guilds::messages::interact-region-error}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+            replace all "{TAG}" with {_region-g} in {_msg}
+            send {_msg} to player
