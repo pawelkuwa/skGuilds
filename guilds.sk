@@ -1,34 +1,111 @@
-expression %player% has guild:
-    return type: boolean
-    get:
-        set {_return} to false
+#custom syntaxes
+#conditions
+
+condition %player% ha[ve|s] guild:
+    check:
         load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
-        set {_return} to yaml value "guild" from "%expression-1%.player"
+        set {_g} to yaml value "guild" from "%expression-1%.player"
         unload yaml "%expression-1%.player"
-        if {_return} is not "brak":
-            set {_return} to true
-        return {_return}
+        if {_g} is not "brak":
+            continue
 
-expression guild tag %text% exists:
-    return type: boolean
-    get:
+condition %player% doesn't ha[ve|s] guild:
+    check:
+        load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
+        set {_g} to yaml value "guild" from "%expression-1%.player"
+        unload yaml "%expression-1%.player"
+        if {_g} is "brak":
+            continue
+
+condition guild tag %text% exist[s]:
+    check:
+        if yaml file "plugins/guilds/data/guilds/%expression-1%.yml" exists:
+            continue
+
+condition guild tag %text% doesn't exist[s]:
+    check:
         if yaml file "plugins/guilds/data/guilds/%expression-1%.yml" doesn't exist:
-            set {_return} to false
-        else:
-            set {_return} to true
-        return {_return}
+            continue
 
-expression guild name %text% exists:
-    return type: boolean
-    get:
-        set {_return} to falseasd
+condition guild name %text% exist[s]:
+    check:
+        set {_return} to false
         load all yaml from directory "plugins/guilds/data/guilds"
         loop all of the currently loaded yaml files:
             if loop-value contains "plugins/guilds/data/guilds/":
                 if yaml value "name" from loop-value is expression-1:
                     set {_return} to true
             unload loop-value
-        return {_return}
+        if {_return} is true:
+            continue
+
+condition guild name %text% doesn't exist[s]:
+    check:
+        set {_return} to false
+        load all yaml from directory "plugins/guilds/data/guilds"
+        loop all of the currently loaded yaml files:
+            if loop-value contains "plugins/guilds/data/guilds/":
+                if yaml value "name" from loop-value is expression-1:
+                    set {_return} to true
+            unload loop-value
+        if {_return} is false:
+            continue
+
+condition %player% is owner:
+    check:
+        load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
+        set {_g} to yaml value "guild" from "%expression-1%.player"
+        unload yaml "%expression-1%.player"
+        load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+        set {_owner} to yaml value "owner" from "%{_g}%.guild"
+        unload yaml "%{_g}%.guild"
+        if {_owner} is "%expression-1%":
+            continue
+
+condition %player% is[n't] [not] owner:
+    check:
+        load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
+        set {_g} to yaml value "guild" from "%expression-1%.player"
+        unload yaml "%expression-1%.player"
+        load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+        set {_owner} to yaml value "owner" from "%{_g}%.guild"
+        unload yaml "%{_g}%.guild"
+        if {_owner} is not "%expression-1%":
+            continue
+
+condition %player% is deputy:
+    check:
+        load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
+        set {_g} to yaml value "guild" from "%expression-1%.player"
+        unload yaml "%expression-1%.player"
+        load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+        set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
+        unload yaml "%{_g}%.guild"
+        set {_return} to false
+        loop {_deputies::*}:
+            if "%expression-1%" is loop-value:
+                set {_return} to true
+                stop loop
+        if {_return} is true:
+            continue
+
+condition %player% is[n't] [not] deputy:
+    check:
+        load yaml "plugins/guilds/data/players/%expression-1%.yml" as "%expression-1%.player"
+        set {_g} to yaml value "guild" from "%expression-1%.player"
+        unload yaml "%expression-1%.player"
+        load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+        set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
+        unload yaml "%{_g}%.guild"
+        set {_return} to false
+        loop {_deputies::*}:
+            if "%expression-1%" is loop-value:
+                set {_return} to true
+                stop loop
+        if {_return} is false:
+            continue
+
+#expressions
 
 expression %player% guild tag:
     return type: text
@@ -37,6 +114,8 @@ expression %player% guild tag:
         set {_return} to yaml value "guild" from "%expression-1%.player"
         unload yaml "%expression-1%.player"
         return {_return}
+
+# ##########################################################################################
 
 on join:
     if yaml file "plugins/guilds/data/players/%player%.yml" doesn't exist:
@@ -95,7 +174,7 @@ on load:
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę" and "{PREFIX} &3/g wyrzuc [nick] &8- &7wyrzuca gracza z gildii"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
         set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
@@ -147,13 +226,17 @@ on load:
         set yaml value "deputies-argument-player-removed-from-deputies-target" from "guilds.messages" to "{PREFIX} &7Nie jesteś już zastępcą w gildii &3{TAG}&7!"
         set yaml value "deputies-argument-player-got-deputy" from "guilds.messages" to "{PREFIX} &7Nadałeś graczowi &3{PLAYER} &7zastępcę w gildii &3{TAG}&7!"
         set yaml value "deputies-argument-player-got-deputy-target" from "guilds.messages" to "{PREFIX} &7Otrzymałeś zastępcę w gildii &3{TAG}&7!"
-        set yaml value "kick-executor-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
-        set yaml value "kick-executor-doesnt-have-permission" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucać z gildii!"
-        set yaml value "kick-no-player-argument" from "guilds.messages" to "{PREFIX} &cPodaj nick gracza!"
-        set yaml value "kick-player-argument-offline" from "guilds.messages" to "{PREFIX} &cPodany gracz jest offline!"
-        set yaml value "kick-player-argument-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz nie jest w żadnej gildii!"
-        set yaml value "kick-player-argument-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz należy do innej gildii!"
-        set yaml value "kick-player-argument-are-owner" from "guilds.messages" to "{PREFIX} &cPodany gracz jest liderem gildii!"
+        set yaml value "kick-executor-no-guild" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
+        set the comments of yaml node "kick-executor-no-guild" from "guilds.messages" to "##########################" and "##########################" and "##WYRZUCANIE GRACZY##" and "##Zmienne: {PREFIX}, {PLAYER}, {EXECUTOR}, {TAG}"
+        set yaml value "kick-executor-no-permissions" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucać graczy!"
+        set yaml value "kick-executor-no-argument" from "guilds.messages" to "{PREFIX} &cPodaj nick gracza!"
+        set yaml value "kick-executor-trying-kick-himself" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucić samego siebie!"
+        set yaml value "kick-executor-trying-kick-owner" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucić lidera!"
+        set yaml value "kick-deputy-trying-kick-another-deputy" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucić zastępcę!"
+        set yaml value "kick-argument-player-no-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz nie jest w gildii!"
+        set yaml value "kick-executor-no-argument-exist" from "guilds.messages" to "{PREFIX} &cPodany gracz nigdy nie był na serwerze!"
+        set yaml value "kick-argument-player-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz jest w innej gildii!"
+        set yaml value "broadcast-kick-player" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7został wyrzucony z gildii &3{TAG} &7przez &3{EXECUTOR}&7!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -161,6 +244,8 @@ on load:
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
+        if executor is console:
+            stop
         if arg-1 is not set:
             loop {guilds::messages::help-commands::*}:
                 set {_msg} to coloured loop-value
@@ -203,19 +288,19 @@ command /g [<text>] [<text>] [<text>]:
                 send {_msg} to player
                 stop
             #sprawdz czy gracz jest w gildii
-            if player has guild is true:
+            if player has guild:
                 set {_msg} to {guilds::messages::player-is-in-guild}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
             #sprawdz czy gildia o podanym tagu nie istnieje
-            if guild tag arg-2 exists is true:
+            if guild tag arg-2 exists:
                 set {_msg} to {guilds::messages::guild-tag-exists}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
             #sprawdz czy gildia o podanej nazwie nie istnieje
-            if guild name arg-3 exists is true:
+            if guild name arg-3 exists:
                 set {_msg} to {guilds::messages::guild-name-exists}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
@@ -347,7 +432,7 @@ command /g [<text>] [<text>] [<text>]:
             stop
         if arg-1 is "usun":
             #sprawdz czy gracz ma gildie
-            if player has guild is false:
+            if player doesn't have guild:
                 set {_msg} to {guilds::messages::player-hasnt-guild}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
@@ -410,7 +495,7 @@ command /g [<text>] [<text>] [<text>]:
             else:
                 set {_g} to arg-2
                 # sprawdz czy gildia istnieje
-                if guild tag {_g} exists is false:
+                if guild tag {_g} doesn't exist:
                     set {_msg} to {guilds::messages::guild-info-doesnt-exists}
                     replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                     send {_msg} to player
@@ -697,40 +782,39 @@ command /g [<text>] [<text>] [<text>]:
             stop
         if arg-1 is "wyrzuc":
             #sprawdz czy executor jest w gildii
-            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
-            set {_g} to yaml value "guild" from "%player%.player"
-            unload yaml "%player%.player"
-            if {_g} is "brak":
-                set {_msg} to {guilds::messages::kick-executor-doesnt-have-guild}
+            if player doesn't have guild:
+                set {_msg} to {guilds::messages::kick-executor-no-guild}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
-            #sprawdz czy executor moze wyrzucac
-            set {_return} to false
+            #sprawdz czy executor ma permisje
+            set {_perm} to false
+            #sprawdz czy jest liderem
+            set {_g} to player guild tag
             load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
             set {_owner} to yaml value "owner" from "%{_g}%.guild"
             set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
             unload yaml "%{_g}%.guild"
-            if {_owner} is player's name:
-                set {_return} to true
+            if {_owner} is "%player%":
+                set {_perm} to true
             loop {_deputies::*}:
-                if loop-value is player's name:
+                if loop-value contains "%player%":
                     set {_return} to true
-            if {_return} is false:
-                set {_msg} to {guilds::messages::kick-executor-doesnt-have-permission}
+                    stop loop
+            if {_perm} is false:
+                set {_msg} to {guilds::messages::kick-executor-no-permissions}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
-                stop
-            #sprawdz czy gracz jest podany
+            #sprawdz czy gracz zostal podany
             if arg-2 is not set:
-                set {_msg} to {guilds::messages::kick-no-player-argument}
+                set {_msg} to {guilds::messages::kick-executor-no-argument}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
-            set {_p} to arg-2 parsed as player
-            #sprawdz czy podany gracz jest offline
-            if {_p} is offline:
-                set {_msg} to {guilds::messages::kick-player-argument-offline}
+            set {_p} to arg-2 parsed as offlineplayer
+            #sprawdz czy podany gracz kiedykolwiek był na serwerze
+            if yaml file "plugins/guilds/data/players/%{_p}%.yml" doesn't exist:
+                set {_msg} to {guilds::messages::kick-executor-no-argument-exist}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
@@ -738,24 +822,69 @@ command /g [<text>] [<text>] [<text>]:
             load yaml "plugins/guilds/data/players/%{_p}%.yml" as "%{_p}%.player"
             set {_argument-g} to yaml value "guild" from "%{_p}%.player"
             unload yaml "%{_p}%.player"
-            if {_g} is "brak":
-                set {_msg} to {guilds::messages::kick-player-argument-doesnt-have-guild}
+            if {_argument-g} is "brak":
+                set {_msg} to {guilds::messages::kick-argument-player-no-guild}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
             #sprawdz czy podany gracz jest w tej samej gildii
             if {_argument-g} is not {_g}:
-                set {_msg} to {guilds::messages::kick-player-argument-another-guild}
+                set {_msg} to {guilds::messages::kick-argument-player-another-guild}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
-            #sprawdz czy podany gracz nie jest przypadkiem liderem
-            if {_p} is {_owner}:
-                set {_msg} to {guilds::messages::kick-player-argument-are-owner}
+            #sprawdz czy podany gracz nie jest executorem
+            if player is {_p}:
+                set {_msg} to {guilds::messages::kick-executor-trying-kick-himself}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
                 stop
-            #sprawdz czy podany gracz jest w deputies
+            #sprawdz czy podany gracz nie jest liderem
+            load yaml "plugins/guilds/data/guilds/%{_argument-g}%.yml" as "%{_argument-g}%.guild"
+            set {_owner} to yaml value "owner" from "%{_argument-g}%.guild"
+            unload yaml "%{_argument-g}%.guild"
+            if {_p}'s name is {_owner}:
+                set {_msg} to {guilds::messages::kick-executor-trying-kick-owner}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            if {_p}'s name is {_owner}:
+                set {_deputy} to false
+                loop {_deputies::*}:
+                    if loop-value contains player's name:
+                        set {_deputy} to true
+                        stop loop
+                if {_deputy} is true:
+                    set {_msg} to {guilds::messages::kick-deputy-trying-kick-another-deputy}
+                    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                    send {_msg} to player
+                    stop
+            #wyrzuc gracza
+            #usun wartosc guilds z yamla gracza
+            load yaml "plugins/guilds/data/players/%{_p}%.yml" as "%{_p}%.player"
+            set yaml value "guild" from "%{_p}%.player" to "brak"
+            save yaml "%{_p}%.player"
+            unload yaml "%{_p}%.player"
+            #usun jego belowname (jeżeli jest online)
+            execute console command "tab player %{_p}% belowname"
+            #usun gracza z pliku yml gildii
+            load yaml "plugins/guilds/data/guilds/%{_argument-g}%.yml" as "%{_argument-g}%.guild"
+            set {_members::*} to yaml list "members" from "%{_argument-g}%.guild"
+            set {_deputies::*} to yaml list "deputies" from "%{_argument-g}%.guild"
+            loop {_deputies::*}:
+                if {_p}'s name is loop-value:
+                    remove {_p}'s name from {_deputies::*}
+                    set yaml list "deputies" from "%{_argument-g}%.guild" to {_deputies::*}
+            remove {_p}'s name from {_members::*}
+            set yaml list "members" from "%{_argument-g}%.guild" to {_members::*}
+            save yaml "%{_argument-g}%.guild"
+            unload yaml "%{_argument-g}%.guild"
+            set {_msg} to {guilds::messages::broadcast-kick-player}
+            replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+            replace all "{PLAYER}" with "%{_p}%" in {_msg}
+            replace all "{EXECUTOR}" with "%player%" in {_msg}
+            replace all "{TAG}" with "%{_argument-g}%" in {_msg}
+            broadcast {_msg}
             stop
 
 command /ga [<text>]:
