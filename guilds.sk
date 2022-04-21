@@ -242,6 +242,8 @@ on load:
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
+        if executor is console:
+            stop
         if arg-1 is not set:
             loop {guilds::messages::help-commands::*}:
                 set {_msg} to coloured loop-value
