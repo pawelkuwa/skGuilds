@@ -232,6 +232,7 @@ on load:
         set yaml value "kick-executor-trying-kick-owner" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucić lidera!"
         set yaml value "kick-deputy-trying-kick-another-deputy" from "guilds.messages" to "{PREFIX} &cNie możesz wyrzucić zastępcę!"
         set yaml value "kick-argument-player-no-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz nie jest w gildii!"
+        set yaml value "kick-executor-no-argument-exist" from "guilds.messages" to "{PREFIX} &cPodany gracz nigdy nie był na serwerze!"
         set yaml value "kick-argument-player-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz jest w innej gildii!"
         set yaml value "broadcast-kick-player" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7został wyrzucony z gildii &3{TAG} &7przez &3{EXECUTOR}&7!"
         save yaml "guilds.messages"
@@ -802,6 +803,12 @@ command /g [<text>] [<text>] [<text>]:
                 send {_msg} to player
                 stop
             set {_p} to arg-2 parsed as offlineplayer
+            #sprawdz czy podany gracz kiedykolwiek był na serwerze
+            if yaml file "plugins/guilds/data/players/%{_p}%.yml" doesn't exist:
+                set {_msg} to {guilds::messages::kick-executor-no-argument-exist}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
             #sprawdz czy podany gracz jest w gildii
             if {_p} doesn't have guild:
                 set {_msg} to {guilds::messages::kick-argument-player-no-guild}
