@@ -841,6 +841,7 @@ command /g [<text>] [<text>] [<text>]:
                 set {_msg} to {guilds::messages::kick-executor-no-permissions}
                 replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
                 send {_msg} to player
+                stop
             #sprawdz czy gracz zostal podany
             if arg-2 is not set:
                 set {_msg} to {guilds::messages::kick-executor-no-argument}
