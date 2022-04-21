@@ -170,6 +170,10 @@ on load:
         set the comments of yaml node "required-items" from "guilds.config" to "Jakie są wymagane przedmioty do stworzenia gildii?" and "Jeżeli ta opcja ma być wyłączona wpisz: none (jako pierwszą z wartości)"
         set yaml value "required-items-gui-name" from "guilds.config" to "{PREFIX} &3Przedmioty na gildie"
         set the comments of yaml node "required-items-gui-name" from "guilds.config" to "Jak ma wyglądać tytuł GUI dla przedmiotów na gildię?"
+        set yaml value "region-notification-type" from "guilds.config" to "chat"
+        set the comments of yaml node "region-notification-type" from "guilds.config" to "Jak ma się wyświetlać powiadomienie o regionie? (wyjście/wejście) actionbar/chat/title"
+        set yaml value "title-region-notification-duration" from "guilds.config" to 3
+        set the comments of yaml node "title-region-notification-duration" from "guilds.config" to "Przez jaki czas ma się wyświetlać title z wiadomością? (czas w sekundach)"
         save yaml "guilds.config"
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
@@ -237,6 +241,15 @@ on load:
         set yaml value "kick-executor-no-argument-exist" from "guilds.messages" to "{PREFIX} &cPodany gracz nigdy nie był na serwerze!"
         set yaml value "kick-argument-player-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz jest w innej gildii!"
         set yaml value "broadcast-kick-player" from "guilds.messages" to "{PREFIX} &7Gracz &3{PLAYER} &7został wyrzucony z gildii &3{TAG} &7przez &3{EXECUTOR}&7!"
+        set yaml value "chat-region-enter" from "guilds.messages" to "{PREFIX} &7Wkroczyłeś na teren gildii &3{TAG} {PREFIX}"
+        set the comments of yaml node "chat-region-enter" from "guilds.messages" to "##########################" and "##########################" and "##NOTYFIKACJE REGIONÓW##" and "##Zmienne: {PREFIX}, {TAG}"
+        set yaml value "chat-region-leave" from "guilds.messages" to "{PREFIX} &7Opuściłeś teren gildii &3{TAG} {PREFIX}"
+        set yaml value "actionbar-region-enter" from "guilds.messages" to "{PREFIX} &7Wkroczyłeś na teren gildii &3{TAG} {PREFIX}"
+        set yaml value "actionbar-region-leave" from "guilds.messages" to "{PREFIX} &7Opuściłeś teren gildii &3{TAG} {PREFIX}"
+        set yaml value "title-region-enter" from "guilds.messages" to "&7&lUWAGA"
+        set yaml value "subtitle-region-enter" from "guilds.messages" to "{PREFIX} &7Wkroczyłeś na teren gildii &3{TAG} {PREFIX}"
+        set yaml value "title-region-leave" from "guilds.messages" to "&7&lUWAGA"
+        set yaml value "subtitle-region-leave" from "guilds.messages" to "{PREFIX} &7Opuściłeś teren gildii &3{TAG} {PREFIX}"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -910,3 +923,45 @@ on inventory click:
 
 on quit:
     clear {guildsData::pendingInvites::%player%::*}
+
+on region enter:
+    if "%event-region%" contains "guild-":
+        set {_tag} to "%event-region%"
+        set {_tag::*} to split {_tag} at "-"
+        replace all " in world %player's world%" with "" in {_tag::2}
+        if {guilds::config::region-notification-type} is "chat":
+            set {_msg} to {guilds::messages::chat-region-enter}
+        else if {guilds::config::region-notification-type} is "actionbar":
+            set {_msg} to {guilds::messages::actionbar-region-enter}
+        else if {guilds::config::region-notification-type} is "title":
+            set {_msg} to {guilds::messages::subtitle-region-enter}
+        replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+        replace all "{TAG}" with {_tag::2} in {_msg}
+        if {guilds::config::region-notification-type} is "chat":
+            send {_msg} to player
+        else if {guilds::config::region-notification-type} is "actionbar":
+            send action bar {_msg} to player
+        else if {guilds::config::region-notification-type} is "title":
+            set {_t} to "%{guilds::config::title-region-notification-duration}% seconds" parsed as timespan
+            send title {guilds::messages::title-region-enter} with subtitle {_msg} to player for {_t}
+
+on region leave:
+    if "%event-region%" contains "guild-":
+        set {_tag} to "%event-region%"
+        set {_tag::*} to split {_tag} at "-"
+        replace all " in world %player's world%" with "" in {_tag::2}
+        if {guilds::config::region-notification-type} is "chat":
+            set {_msg} to {guilds::messages::chat-region-leave}
+        else if {guilds::config::region-notification-type} is "actionbar":
+            set {_msg} to {guilds::messages::actionbar-region-leave}
+        else if {guilds::config::region-notification-type} is "title":
+            set {_msg} to {guilds::messages::subtitle-region-leave}
+        replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+        replace all "{TAG}" with {_tag::2} in {_msg}
+        if {guilds::config::region-notification-type} is "chat":
+            send {_msg} to player
+        else if {guilds::config::region-notification-type} is "actionbar":
+            send action bar {_msg} to player
+        else if {guilds::config::region-notification-type} is "title":
+            set {_t} to "%{guilds::config::title-region-notification-duration}% seconds" parsed as timespan
+            send title {guilds::messages::title-region-leave} with subtitle {_msg} to player for {_t}
