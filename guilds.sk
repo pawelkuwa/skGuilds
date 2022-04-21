@@ -816,7 +816,7 @@ command /g [<text>] [<text>] [<text>]:
                 send {_msg} to player
                 stop
             #sprawdz czy podany gracz jest w tej samej gildii
-            load yaml "plugins/guilds/data/player/%{_p}%.yml" as "%{_p}%.player"
+            load yaml "plugins/guilds/data/players/%{_p}%.yml" as "%{_p}%.player"
             set {_argument-g} to yaml value "guild" from "%{_p}%.player"
             unload yaml "%{_p}%.player"
             if {_argument-g} is not player guild tag:
