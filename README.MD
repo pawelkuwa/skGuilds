@@ -2,7 +2,9 @@ Wymagane pluginy: skript-reflect, skript-yaml, ShoSK, TAB
 
 Składnia:
 
-`%player% has guild` sprawdza czy podany gracz jest w gildii (wartość: boolean - true/false)
+Sprawdza czy gracz jest w gildii
+`if %player% ha[ve|s] guild:`
+`if %player% doesn't ha[ve|s] guild:`
 
 `guild tag %text% exists` sprawdza czy gildia o podanym tagu istnieje (wartość: boolean - true/false)
 
