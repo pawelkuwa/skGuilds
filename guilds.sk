@@ -185,7 +185,7 @@ on load:
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę" and "{PREFIX} &3/g wyrzuc [nick] &8- &7wyrzuca gracza z gildii"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę" and "{PREFIX} &3/g wyrzuc [nick] &8- &7wyrzuca gracza z gildii" and "{PREFIX} &3/g baza &8- &7teleportuje na bazę" and "{PREFIX} &3/g pvp &8- &7zmienia status pvp w gildii"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
         set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
@@ -265,6 +265,11 @@ on load:
         set yaml value "base-teleportation-started" from "guilds.messages" to "{PREFIX} &aRozpoczynasz teleportacje na bazę, nie ruszaj się przez {VALUE} sekund!"
         set yaml value "base-teleportation-canceled-by-move" from "guilds.messages" to "{PREFIX} &cRuszyłeś się, teleportacja zostaje przerwana!"
         set yaml value "base-teleportation-successed" from "guilds.messages" to "{PREFIX} &aPrzeteleportowano na bazę {TAG}!"
+        set yaml value "pvp-executor-no-guild" from "guilds.messages" to "{PREFIX} &cNie masz gildii!"
+        set the comments of yaml node "pvp-executor-no-guild" from "guilds.messages" to "##########################" and "##########################" and "##ZMIANA STATUSU PVP##" and "##Zmienne: {PREFIX}, {TAG}"
+        set yaml value "pvp-executor-no-permissions" from "guilds.messages" to "{PREFIX} &cNie możesz zmieniać statusu PVP w gildii!"
+        set yaml value "pvp-changed-to-true" from "guilds.messages" to "{PREFIX} &aWłączono PVP w gildii {TAG}!"
+        set yaml value "pvp-changed-to-false" from "guilds.messages" to "{PREFIX} &cWyłączono PVP w gildii {TAG}!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -439,6 +444,7 @@ command /g [<text>] [<text>] [<text>]:
             set yaml value "name" from "%arg-2%.guild" to arg-3
             set yaml value "center" from "%arg-2%.guild" to "%x-coordinate of player's location%, %y-coordinate of player's location%, %z-coordinate of player's location%"
             set yaml value "owner" from "%arg-2%.guild" to player's name
+            set yaml value "pvp" from "%arg-2%.guild" to false
             set yaml list "members" from "%arg-2%.guild" to player's name
             set yaml list "deputies" from "%arg-2%.guild" to "none"
             save yaml "%arg-2%.guild"
@@ -972,6 +978,57 @@ command /g [<text>] [<text>] [<text>]:
             replace all "{TAG}" with {_g} in {_msg}
             send {_msg} to player
             stop
+        if arg-1 is "pvp":
+            #spradza czy gracz jest w gildii
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set {_g} to yaml value "guild" from "%player%.player"
+            unload yaml "%player%.player"
+            if {_g} is "brak":
+                set {_msg} to prefixed({guilds::messages::pvp-executor-no-guild})
+                send {_msg} to player
+                stop
+            #sprawdza czy gracz ma permisje
+            set {_perm} to false
+            #sprawdz czy jest liderem
+            set {_g} to player guild tag
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_owner} to yaml value "owner" from "%{_g}%.guild"
+            set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
+            if {_owner} is "%player%":
+                set {_perm} to true
+            loop {_deputies::*}:
+                if loop-value contains "%player%":
+                    set {_return} to true
+                    stop loop
+            if {_perm} is false:
+                set {_msg} to {guilds::messages::pvp-executor-no-permissions}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            #zmien pvp
+            #pobierz gildie
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set {_g} to yaml value "guild" from "%player%.player"
+            unload yaml "%player%.player"
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_pvp} to yaml value "pvp" from "%{_g}%.guild"
+            if {_pvp} is false:
+                set yaml value "pvp" from "%{_g}%.guild" to true
+                #wiadomsc
+                set {_msg} to prefixed({guilds::messages::pvp-changed-to-true})
+                replace all "{TAG}" with {_g} in {_msg}
+                send {_msg} to player
+            else if {_pvp} is true:
+                set yaml value "pvp" from "%{_g}%.guild" to false
+                #wiadomosc
+                set {_msg} to prefixed({guilds::messages::pvp-changed-to-false})
+                replace all "{TAG}" with {_g} in {_msg}
+                send {_msg} to player
+            save yaml "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
+            stop
+
 
 command /ga [<text>]:
     permission: ga.usage
@@ -1043,14 +1100,18 @@ on region leave:
 
 on damage of player:
     if attacker is a player:
-        load yaml "plugins/guilds/data/player/%attacker%.yml" as "%attacker%.player"
+        load yaml "plugins/guilds/data/players/%attacker%.yml" as "%attacker%.player"
         set {_attacker-g} to yaml value "guild" from "%attacker%.player"
         unload yaml "%attacker%.player"
-        load yaml "plugins/guilds/data/player/%victim%.yml" as "%victim%.player"
+        load yaml "plugins/guilds/data/players/%victim%.yml" as "%victim%.player"
         set {_victim-g} to yaml value "guild" from "%victim%.player"
         unload yaml "%victim%.player"
         if {_attacker-g} is {_victim-g}:
-            cancel event
+            load yaml "plugins/guilds/data/guilds/%{_attacker-g}%.yml" as "%{_attacker-g}%.guild"
+            set {_pvp} to yaml value "pvp" from "%{_attacker-g}%.guild"
+            unload yaml "%{_attacker-g}%.guild"
+            if {_pvp} is true:
+                cancel event
 
 on place:
     if "%region at event-block%" contain "guild-":
