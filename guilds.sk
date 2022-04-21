@@ -21,7 +21,7 @@ expression guild tag %text% exists:
 expression guild name %text% exists:
     return type: boolean
     get:
-        set {_return} to false
+        set {_return} to falseasd
         load all yaml from directory "plugins/guilds/data/guilds"
         loop all of the currently loaded yaml files:
             if loop-value contains "plugins/guilds/data/guilds/":
