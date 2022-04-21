@@ -965,3 +965,14 @@ on region leave:
         else if {guilds::config::region-notification-type} is "title":
             set {_t} to "%{guilds::config::title-region-notification-duration}% seconds" parsed as timespan
             send title {guilds::messages::title-region-leave} with subtitle {_msg} to player for {_t}
+
+on damage of player:
+    if attacker is a player:
+        load yaml "plugins/guilds/data/player/%attacker%.yml" as "%attacker%.player"
+        set {_attacker-g} to yaml value "guild" from "%attacker%.player"
+        unload yaml "%attacker%.player"
+        load yaml "plugins/guilds/data/player/%victim%.yml" as "%victim%.player"
+        set {_victim-g} to yaml value "guild" from "%victim%.player"
+        unload yaml "%victim%.player"
+        if {_attacker-g} is {_victim-g}:
+            cancel event
