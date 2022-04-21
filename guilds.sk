@@ -115,6 +115,11 @@ expression %player% guild tag:
         unload yaml "%expression-1%.player"
         return {_return}
 
+#functions
+function prefixed(t: text) :: text:
+    replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_t}
+    return {_t}
+
 # ##########################################################################################
 
 on join:
@@ -174,6 +179,8 @@ on load:
         set the comments of yaml node "region-notification-type" from "guilds.config" to "Jak ma się wyświetlać powiadomienie o regionie? (wyjście/wejście) actionbar/chat/title"
         set yaml value "title-region-notification-duration" from "guilds.config" to 3
         set the comments of yaml node "title-region-notification-duration" from "guilds.config" to "Przez jaki czas ma się wyświetlać title z wiadomością? (czas w sekundach)"
+        set yaml value "base-teleport-duration" from "guilds.config" to 5
+        set the comments of yaml node "base-teleport-duration" from "guilds.config" to "Ile ma trwać teleportacja na bazę?"
         save yaml "guilds.config"
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
@@ -252,6 +259,12 @@ on load:
         set yaml value "subtitle-region-leave" from "guilds.messages" to "{PREFIX} &7Opuściłeś teren gildii &3{TAG} {PREFIX}"
         set yaml value "interact-region-error" from "guilds.messages" to "{PREFIX} &cNie możesz budować na terenie gildii {TAG}!"
         set the comments of yaml node "interact-region-error" from "guilds.messages" to "##########################" and "##########################" and "##REGIONY##" and "##Zmienne: {PREFIX}, {TAG}"
+        set yaml value "base-teleport-no-guild-error" from "guilds.messages" to "{PREFIX} &cNie masz gildii!"
+        set the comments of yaml node "base-teleport-no-guild-error" from "guilds.messages" to "##########################" and "##########################" and "##BAZA##" and "##Zmienne: {PREFIX}, {TAG}, {VALUE}"
+        set yaml value "base-teleportation-already-started" from "guilds.messages" to "{PREFIX} &cJesteś już podczas teleportacji!"
+        set yaml value "base-teleportation-started" from "guilds.messages" to "{PREFIX} &aRozpoczynasz teleportacje na bazę, nie ruszaj się przez {VALUE} sekund!"
+        set yaml value "base-teleportation-canceled-by-move" from "guilds.messages" to "{PREFIX} &cRuszyłeś się, teleportacja zostaje przerwana!"
+        set yaml value "base-teleportation-successed" from "guilds.messages" to "{PREFIX} &aPrzeteleportowano na bazę {TAG}!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
@@ -424,6 +437,7 @@ command /g [<text>] [<text>] [<text>]:
             load yaml "plugins/guilds/data/guilds/%arg-2%.yml" as "%arg-2%.guild"
             set yaml value "tag" from "%arg-2%.guild" to arg-2
             set yaml value "name" from "%arg-2%.guild" to arg-3
+            set yaml value "center" from "%arg-2%.guild" to "%x-coordinate of player's location%, %y-coordinate of player's location%, %z-coordinate of player's location%"
             set yaml value "owner" from "%arg-2%.guild" to player's name
             set yaml list "members" from "%arg-2%.guild" to player's name
             set yaml list "deputies" from "%arg-2%.guild" to "none"
@@ -902,6 +916,62 @@ command /g [<text>] [<text>] [<text>]:
             replace all "{TAG}" with "%{_argument-g}%" in {_msg}
             broadcast {_msg}
             stop
+        if arg-1 is "baza":
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.player"
+            set {_g} to yaml value "guild" from "%player%.player"
+            unload yaml "%player%.player"
+            if {_g} is "brak":
+                set {_msg} to {guilds::messages::base-teleport-no-guild-error}
+                replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
+                send {_msg} to player
+                stop
+            if {guildsData::teleportation::%player%} is set:
+                set {_msg} to prefixed({guilds::messages::base-teleportation-already-started})
+                send {_msg} to player
+                stop
+            #zacznij teleportacje
+            set {guildsData::teleportation::%player%} to true
+            set {guildsData::teleportationLoc::%player%} to location of player
+            set {_msg} to prefixed({guilds::messages::base-teleportation-started})
+            replace all "{VALUE}" with "%{guilds::config::base-teleport-duration}%" in {_msg}
+            send {_msg} to player
+            loop {guilds::config::base-teleport-duration} times:
+                if x-coordinate of player's location is not x-coordinate of {guildsData::teleportationLoc::%player%}:
+                    set {_msg} to prefixed({guilds::messages::base-teleportation-canceled-by-move})
+                    send {_msg} to player
+                    clear {guildsData::teleportation::%player%}
+                    stop
+                if y-coordinate of player's location is not y-coordinate of {guildsData::teleportationLoc::%player%}:
+                    set {_msg} to prefixed({guilds::messages::base-teleportation-canceled-by-move})
+                    send {_msg} to player
+                    clear {guildsData::teleportation::%player%}
+                    stop
+                if z-coordinate of player's location is not z-coordinate of {guildsData::teleportationLoc::%player%}:
+                    set {_msg} to prefixed({guilds::messages::base-teleportation-canceled-by-move})
+                    send {_msg} to player
+                    clear {guildsData::teleportation::%player%}
+                    stop
+                wait 1 real seconds
+            #gildia
+            load yaml "plugins/guilds/data/players/%player%.yml" as "%player%.yml"
+            set {_g} to yaml value "guild" from "%player%.yml"
+            unload yaml "%player%.yml"
+            if {_g} is "brak":
+                stop
+            #teleportuj
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set {_loc} to yaml value "center" from "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
+            set {_loc::*} to split {_loc} at ", "
+            loop 3 times:
+                set {_loc::%loop-value%} to {_loc::%loop-value%} parsed as number
+            set {_loc} to location({_loc::1}, {_loc::2}, {_loc::3}, world "world")
+            teleport player to {_loc}
+            clear {guildsData::teleportation::%player%}
+            set {_msg} to prefixed({guilds::messages::base-teleportation-successed})
+            replace all "{TAG}" with {_g} in {_msg}
+            send {_msg} to player
+            stop
 
 command /ga [<text>]:
     permission: ga.usage
@@ -926,6 +996,8 @@ on inventory click:
 
 on quit:
     clear {guildsData::pendingInvites::%player%::*}
+    clear {guildsData::teleportation::%player%}
+    clear {guildsData::teleportationLoc::%player%}
 
 on region enter:
     if "%event-region%" contains "guild-":
