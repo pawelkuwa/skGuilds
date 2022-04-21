@@ -1,5 +1,7 @@
 Wymagane pluginy: skript-reflect, skript-yaml, ShoSK, TAB
 
+Download skryptu: https://raw.githubusercontent.com/pawelkuwa/skGuilds/main/guilds.sk
+
 Składnia:
 
 Sprawdza czy gracz jest w gildii
