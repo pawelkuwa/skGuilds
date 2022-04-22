@@ -276,6 +276,21 @@ on load:
         unload yaml "guilds.messages"
     reloadConfig()
     reloadMessages()
+    loop all players:
+        if yaml file "plugins/guilds/data/players/%loop-value%.yml" doesn't exist:
+            load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
+            set yaml value "guild" from "%loop-value%.player" to "brak"
+            set yaml value "points" from "%loop-value%.player" to 1000
+            set yaml value "kills" from "%loop-value%.player" to 0
+            set yaml value "deaths" from "%loop-value%.player" to 0
+            save yaml "%loop-value%.player"
+            unload yaml "%loop-value%.player"
+        execute console command "tab player %loop-value% belowname"
+        if loop-value guild tag is not "brak":
+            set {_g} to loop-value guild tag
+            set {_format} to {guilds::config::belowname-tag-format}
+            replace all "{TAG}" with {_g} in {_format}
+            execute console command "tab player %loop-value% belowname %{_format}%"
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
