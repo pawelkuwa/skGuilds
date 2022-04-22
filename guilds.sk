@@ -202,6 +202,7 @@ on load:
         set yaml value "player-invite-cant-send" from "guilds.messages" to "{PREFIX} &cNie możesz zapraszać do gildii!"
         set yaml value "invite-no-player-argument" from "guilds.messages" to "{PREFIX} &cPodaj nick gracza!"
         set yaml value "player-is-offline" from "guilds.messages" to "{PREFIX} &cPodany gracz jest offline!"
+        set yaml value "invite-player-doesnt-exists" from "guilds.messages" to "{PREFIX} &cPodany gracz nigdy nie był na serwerze!"
         set yaml value "invite-player-argument-is-in-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz jest już w gildii!"
         set yaml value "recive-invite-message" from "guilds.messages" to "{PREFIX} &7Otrzymałeś zaproszenie do gildii &3{TAG}&7!"
         set yaml value "send-invite-message" from "guilds.messages" to "{PREFIX} &7Wysłałeś zaproszenie graczowi &3{PLAYER}&7!"
@@ -222,6 +223,7 @@ on load:
         set yaml value "deputies-argument-player-is-in-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz należy do innej gildii!"
         set yaml value "deputies-argument-player-are-executor" from "guilds.messages" to "{PREFIX} &cNie możesz mianować siebie samego jako zastępcę!"
         set yaml value "deputies-argument-player-removed-from-deputies" from "guilds.messages" to "{PREFIX} &7Odebrałeś graczowi &3{PLAYER} &7zastępcę w gildii &3{TAG}&7!"
+        set yaml value "deputy-player-doesnt-exists" from "guilds.messages" to "{PREFIX} &cPodany gracz nigdy nie był na serwerze!"
         set yaml value "deputies-argument-player-removed-from-deputies-target" from "guilds.messages" to "{PREFIX} &7Nie jesteś już zastępcą w gildii &3{TAG}&7!"
         set yaml value "deputies-argument-player-got-deputy" from "guilds.messages" to "{PREFIX} &7Nadałeś graczowi &3{PLAYER} &7zastępcę w gildii &3{TAG}&7!"
         set yaml value "deputies-argument-player-got-deputy-target" from "guilds.messages" to "{PREFIX} &7Otrzymałeś zastępcę w gildii &3{TAG}&7!"
@@ -593,6 +595,11 @@ command /g [<text>] [<text>] [<text>]:
                 send {_msg} to player
                 stop
             set {_p} to arg-2 parsed as player
+            #sprawdz czy gracz istnieje
+            if yaml file "plugins/guilds/data/players/%{_p}%.yml" doesn't exist:
+                set {_msg} to prefixed({guilds::messages::invite-player-doesnt-exists})
+                send {_msg} to player
+                stop
             #sprawdz czy jest online
             if {_p} is offline:
                 set {_msg} to {guilds::messages::player-is-offline}
@@ -741,6 +748,11 @@ command /g [<text>] [<text>] [<text>]:
                 send {_msg} to player
                 stop
             set {_p} to arg-2 parsed as player
+            #sprawdz czy podany gracz istnieje
+            if yaml file "plugins/guilds/data/players/%{_p}%.yml" doesn't exist:
+                set {_msg} to prefixed({guilds::messages::deputy-player-doesnt-exists})
+                send {_msg} to player
+                stop
             #sprawdz czy podany gracz jest w gildii - passed
             load yaml "plugins/guilds/data/players/%{_p}%.yml" as "%{_p}%.player"
             set {_argument-g} to yaml value "guild" from "%{_p}%.player"
