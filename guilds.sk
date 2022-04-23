@@ -169,6 +169,10 @@ on load:
         set the comments of yaml node "title-region-notification-duration" from "guilds.config" to "Przez jaki czas ma się wyświetlać title z wiadomością? (czas w sekundach)"
         set yaml value "base-teleport-duration" from "guilds.config" to 5
         set the comments of yaml node "base-teleport-duration" from "guilds.config" to "Ile ma trwać teleportacja na bazę?"
+        set yaml value "start-hp-guild" from "guilds.config" to 1000
+        set the comments of yaml node "start-hp-guild" from "guilds.config" to "Ile ma mieć hp gildia po założeniu?"
+        set yaml value "max-hp-guild" from "guilds.config" to 1000
+        set the comments of yaml node "max-hp-guild" from "guilds.config" to "Ile ma mieć maksymalnie hp gildia po założeniu?"
         save yaml "guilds.config"
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
@@ -272,25 +276,30 @@ on load:
         set yaml value "owner-argument-player-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz nie jest w gildii!"
         set yaml value "owner-argument-player-is-in-another-guild" from "guilds.messages" to "{PREFIX} &cPodany gracz jest w innej gildii!"
         set yaml value "broadcast-owner-change" from "guilds.messages" to "{PREFIX} &7Gracz &3{EXECUTOR} &7przekazał lidera graczowi &3{PLAYER} &7w gildii &3{TAG}&7!"
+        set yaml value "broadcast-gulds-was-destroyed" from "guilds.messages" to "{PREFIX} &7Gildia &3{VICTIM} &7została podbita przez &3{ATTACKER}&7!"
+        set the comments of yaml node "broadcast-gulds-was-destroyed" from "guilds.messages" to "##########################" and "##########################" and "##ZMIANA LIDERA##" and "##Zmienne: {PREFIX}, {VICTIM}, {ATTACKER}, {TAG}, {LEFTHP}, {MAXHP}"
+        set yaml value "attack-attacker-cant-attack" from "guilds.messages" to "{PREFIX} &cNie możesz podbić gildii!"
+        set yaml value "attack-attacker-trying-attack-our-guild" from "guilds.messages" to "{PREFIX} &cNie możesz podbić swojej gildii!"
+        set yaml value "attack-player-attacked-the-guild" from "guilds.messages" to "{PREFIX} &7Podbiłeś gildię &3{TAG} &7zostało &3{LEFTHP}&7/&3{MAXHP}&7!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
     reloadMessages()
     loop all players:
-        if yaml file "plugins/guilds/data/players/%loop-value%.yml" doesn't exist:
-            load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
-            set yaml value "guild" from "%loop-value%.player" to "brak"
-            set yaml value "points" from "%loop-value%.player" to 1000
-            set yaml value "kills" from "%loop-value%.player" to 0
-            set yaml value "deaths" from "%loop-value%.player" to 0
-            save yaml "%loop-value%.player"
-            unload yaml "%loop-value%.player"
-        execute console command "tab player %loop-value% belowname"
-        if loop-value guild tag is not "brak":
-            set {_g} to loop-value guild tag
-            set {_format} to {guilds::config::belowname-tag-format}
-            replace all "{TAG}" with {_g} in {_format}
-            execute console command "tab player %loop-value% belowname %{_format}%"
+    if yaml file "plugins/guilds/data/players/%loop-value%.yml" doesn't exist:
+        load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
+        set yaml value "guild" from "%loop-value%.player" to "brak"
+        set yaml value "points" from "%loop-value%.player" to 1000
+        set yaml value "kills" from "%loop-value%.player" to 0
+        set yaml value "deaths" from "%loop-value%.player" to 0
+        save yaml "%loop-value%.player"
+        unload yaml "%loop-value%.player"
+    execute console command "tab player %loop-value% belowname"
+    if loop-value guild tag is not "brak":
+        set {_g} to loop-value guild tag
+        set {_format} to {guilds::config::belowname-tag-format}
+        replace all "{TAG}" with {_g} in {_format}
+        execute console command "tab player %loop-value% belowname %{_format}%"
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
@@ -461,8 +470,14 @@ command /g [<text>] [<text>] [<text>]:
             set yaml value "name" from "%arg-2%.guild" to arg-3
             set yaml value "center" from "%arg-2%.guild" to "%x-coordinate of player's location%, %y-coordinate of player's location%, %z-coordinate of player's location%"
             set yaml value "owner" from "%arg-2%.guild" to player's name
+            set yaml value "hp" from "%arg-2%.guild" to {guilds::config::start-hp-guild}
             set yaml value "pvp" from "%arg-2%.guild" to false
             set yaml list "members" from "%arg-2%.guild" to player's name
+            set {_loc} to player's location
+            add 1 to y-coordinate of {_loc}
+            spawn end crystal at {_loc}
+            set {_e} to last spawned end crystal
+            set {guildsData::%uuid of {_e}%::value} to arg-2
             set yaml list "deputies" from "%arg-2%.guild" to "none"
             save yaml "%arg-2%.guild"
             unload yaml "%arg-2%.guild"
@@ -1279,3 +1294,48 @@ on break:
             replace all "{PREFIX}" with {guilds::config::chat-prefix} in {_msg}
             replace all "{TAG}" with {_region-g} in {_msg}
             send {_msg} to player
+
+on damage of end crystal:
+    if {guildsData::%uuid of victim%::value} is set:
+        cancel event
+        if attacker guild tag is {guildsData::%uuid of victim%::value}:
+            set {_msg} to prefixed({guilds::messages::attack-attacker-trying-attack-our-guild})
+            send {_msg} to attacker
+            stop
+        if attacker guild tag is "brak":
+            set {_msg} to prefixed({guilds::messages::attack-attacker-cant-attack})
+            send {_msg} to attacker
+            stop
+        if attacker guild tag is not {guildsData::%uuid of victim%::value}:
+            load yaml "plugins/guilds/data/guilds/%{guildsData::%uuid of victim%::value}%.yml" as "%{guildsData::%uuid of victim%::value}%.guild"
+            set {_hp} to yaml value "hp" from "%{guildsData::%uuid of victim%::value}%.guild"
+            remove 1 from {_hp}
+            set yaml value "hp" from "%{guildsData::%uuid of victim%::value}%.guild" to {_hp}
+            save yaml "%{guildsData::%uuid of victim%::value}%.guild"
+            unload yaml "%{guildsData::%uuid of victim%::value}%.guild"
+            set {_msg} to prefixed({guilds::messages::attack-player-attacked-the-guild})
+            replace all "{TAG}" with {guildsData::%uuid of victim%::value} in {_msg}
+            replace all "{LEFTHP}" with "%{_hp}%" in {_msg}
+            replace all "{MAXHP}" with "%{guilds::config::max-hp-guild}%" in {_msg}
+            send {_msg} to attacker
+            if {_hp} is 0:
+                load yaml "plugins/guilds/data/guilds/%{guildsData::%uuid of victim%::value}%.yml" as "%{guildsData::%uuid of victim%::value}%.guild"
+                set {_members::*} to yaml list "members" from "%{guildsData::%uuid of victim%::value}%.guild"
+                delete yaml "%{guildsData::%uuid of victim%::value}%.guild"
+                unload yaml "%{guildsData::%uuid of victim%::value}%.guild"
+                execute console command "rg remove guild-%{guildsData::%uuid of victim%::value}% -w %attacker's world%"
+                loop {_members::*}:
+                    execute console command "tab player %loop-value% belowname"
+                    load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
+                    set yaml value "guild" from "%loop-value%.player" to "brak"
+                    save yaml "%loop-value%.player"
+                    unload yaml "%loop-value%.player"
+                set {_msg} to prefixed({guilds::messages::broadcast-gulds-was-destroyed})
+                replace all "{ATTACKER}" with attacker's name in {_msg}
+                replace all "{VICTIM}" with {guildsData::%uuid of victim%::value} in {_msg}
+                teleport victim to location(x-coordinate of victim, -256, z-coordinate of victim)
+                delete victim
+                clear {guildsData::%uuid of victim%::value}
+                broadcast {_msg}
+                stop
+            stop
