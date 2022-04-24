@@ -1,3 +1,5 @@
+too hard for me... tablist destoryed me
+
 Wymagane pluginy: skript-reflect, skript-yaml, ShoSK, TAB
 
 Download skryptu: https://raw.githubusercontent.com/pawelkuwa/skGuilds/main/guilds.sk
