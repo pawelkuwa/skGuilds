@@ -177,7 +177,7 @@ on load:
         unload yaml "guilds.config"
     if yaml file "plugins/guilds/messages.yml" doesn't exist:
         load yaml "plugins/guilds/messages.yml" as "guilds.messages"
-        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę" and "{PREFIX} &3/g wyrzuc [nick] &8- &7wyrzuca gracza z gildii" and "{PREFIX} &3/g baza &8- &7teleportuje na bazę" and "{PREFIX} &3/g pvp &8- &7zmienia status pvp w gildii" and "{PREFIX} &3/g opusc &8- &7opuszcza gildię" and "{PREFIX} &3/g lider [nick] &8- &7zmienia lidera gildii"
+        set yaml list "help-commands" from "guilds.messages" to "{PREFIX} &8&m-=-=-=-=-=&r &8( &3&lGILDIE &8)&8&m=-=-=-=-=-&r {PREFIX}" and "{PREFIX} &3/g zaloz [tag] [nazwa] &8- &7tworzy gildie" and "{PREFIX} &3/g itemy &8- &7wyświetla przedmioty na gildie" and "{PREFIX} &3/g usun &8- &7usuwa gildię" and "{PREFIX} &3/g info [tag] &8- &7wyświetla informacje o gildii" and "{PREFIX} &3/g zapros [nick] &8- &7zaprasza podanego gracza do gildii" and "{PREFIX} &3/g dolacz [tag] &8- &7dołącza do gildii" and "{PREFIX} &3/g zastepca [nick] &8- &7mianuj podanego gracza jako zastępcę" and "{PREFIX} &3/g wyrzuc [nick] &8- &7wyrzuca gracza z gildii" and "{PREFIX} &3/g baza &8- &7teleportuje na bazę" and "{PREFIX} &3/g pvp &8- &7zmienia status pvp w gildii" and "{PREFIX} &3/g opusc &8- &7opuszcza gildię" and "{PREFIX} &3/g lider [nick] &8- &7zmienia lidera gildii" and "{PREFIX} &3/g ustawbaze &8- &7ustawia nową bazę"
         set the comments of yaml node "help-commands" from "guilds.messages" to "Jak ma wyglądać komenda która wyświetla się po wpisaniu /g?" and "Zmienne:" and "  {PREFIX} - wyświetla prefix"
         set yaml value "no-tag-argument" from "guilds.messages" to "{PREFIX} &cPodaj tag gildii!"
         set the comments of yaml node "no-tag-argument" from "guilds.messages" to "##########################" and "##########################" and "##TWORZENIE GILDII##" and "##Zmienne: {PREFIX}, {MIN-TAG-LENGTH}, {MAX-TAG-LENGTH}, {MIN-NAME-LENGTH}, {MAX-NAME-LENGTH}, {PLAYER}, {TAG}, {NAME}, {ITEM}"
@@ -281,25 +281,30 @@ on load:
         set yaml value "attack-attacker-cant-attack" from "guilds.messages" to "{PREFIX} &cNie możesz podbić gildii!"
         set yaml value "attack-attacker-trying-attack-our-guild" from "guilds.messages" to "{PREFIX} &cNie możesz podbić swojej gildii!"
         set yaml value "attack-player-attacked-the-guild" from "guilds.messages" to "{PREFIX} &7Podbiłeś gildię &3{TAG} &7zostało &3{LEFTHP}&7/&3{MAXHP}&7!"
+        set yaml value "setbase-player-is-not-in-guild-region" from "guilds.messages" to "{PREFIX} &cNie jesteś na terenie swojej gildii!"
+        set the comments of yaml node "setbase-player-is-not-in-guild-region" from "guilds.messages" to "##########################" and "##########################" and "##ZMIANA MIEJSCA BAZY##" and "##Zmienne: {PREFIX}, {TAG}"
+        set yaml value "setbase-player-doesnt-have-guild" from "guilds.messages" to "{PREFIX} &cNie jesteś w gildii!"
+        set yaml value "setbase-player-doesnt-have-permission" from "guilds.messages" to "{PREFIX} &cNie możesz zmienić miejsca bazy!"
+        set yaml value "setbase-base-set-successed" from "guilds.messages" to "{PREFIX} &7Pomyślnie ustawiono nową bazę gildii &3{TAG}&7!"
         save yaml "guilds.messages"
         unload yaml "guilds.messages"
     reloadConfig()
     reloadMessages()
     loop all players:
-    if yaml file "plugins/guilds/data/players/%loop-value%.yml" doesn't exist:
-        load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
-        set yaml value "guild" from "%loop-value%.player" to "brak"
-        set yaml value "points" from "%loop-value%.player" to 1000
-        set yaml value "kills" from "%loop-value%.player" to 0
-        set yaml value "deaths" from "%loop-value%.player" to 0
-        save yaml "%loop-value%.player"
-        unload yaml "%loop-value%.player"
-    execute console command "tab player %loop-value% belowname"
-    if loop-value guild tag is not "brak":
-        set {_g} to loop-value guild tag
-        set {_format} to {guilds::config::belowname-tag-format}
-        replace all "{TAG}" with {_g} in {_format}
-        execute console command "tab player %loop-value% belowname %{_format}%"
+        if yaml file "plugins/guilds/data/players/%loop-value%.yml" doesn't exist:
+            load yaml "plugins/guilds/data/players/%loop-value%.yml" as "%loop-value%.player"
+            set yaml value "guild" from "%loop-value%.player" to "brak"
+            set yaml value "points" from "%loop-value%.player" to 1000
+            set yaml value "kills" from "%loop-value%.player" to 0
+            set yaml value "deaths" from "%loop-value%.player" to 0
+            save yaml "%loop-value%.player"
+            unload yaml "%loop-value%.player"
+        execute console command "tab player %loop-value% belowname"
+        if loop-value guild tag is not "brak":
+            set {_g} to loop-value guild tag
+            set {_format} to {guilds::config::belowname-tag-format}
+            replace all "{TAG}" with {_g} in {_format}
+            execute console command "tab player %loop-value% belowname %{_format}%"
 
 command /g [<text>] [<text>] [<text>]:
     trigger:
@@ -469,6 +474,7 @@ command /g [<text>] [<text>] [<text>]:
             set yaml value "tag" from "%arg-2%.guild" to arg-2
             set yaml value "name" from "%arg-2%.guild" to arg-3
             set yaml value "center" from "%arg-2%.guild" to "%x-coordinate of player's location%, %y-coordinate of player's location%, %z-coordinate of player's location%"
+            set yaml value "base" from "%arg-2%.guild" to "%x-coordinate of player's location%, %y-coordinate of player's location%, %z-coordinate of player's location%, %player's world%, %player's yaw%, %player's pitch%"
             set yaml value "owner" from "%arg-2%.guild" to player's name
             set yaml value "hp" from "%arg-2%.guild" to {guilds::config::start-hp-guild}
             set yaml value "pvp" from "%arg-2%.guild" to false
@@ -985,17 +991,17 @@ command /g [<text>] [<text>] [<text>]:
             replace all "{VALUE}" with "%{guilds::config::base-teleport-duration}%" in {_msg}
             send {_msg} to player
             loop {guilds::config::base-teleport-duration} times:
-                if x-coordinate of player's location is not x-coordinate of {guildsData::teleportationLoc::%player%}:
+                if difference between x-coordinate of player's location and x-coordinate of {guildsData::teleportationLoc::%player%} > 0.5:
                     set {_msg} to prefixed({guilds::messages::base-teleportation-canceled-by-move})
                     send {_msg} to player
                     clear {guildsData::teleportation::%player%}
                     stop
-                if y-coordinate of player's location is not y-coordinate of {guildsData::teleportationLoc::%player%}:
+                if difference between y-coordinate of player's location and y-coordinate of {guildsData::teleportationLoc::%player%} > 0.5:
                     set {_msg} to prefixed({guilds::messages::base-teleportation-canceled-by-move})
                     send {_msg} to player
                     clear {guildsData::teleportation::%player%}
                     stop
-                if z-coordinate of player's location is not z-coordinate of {guildsData::teleportationLoc::%player%}:
+                if difference between z-coordinate of player's location and z-coordinate of {guildsData::teleportationLoc::%player%} > 0.5:
                     set {_msg} to prefixed({guilds::messages::base-teleportation-canceled-by-move})
                     send {_msg} to player
                     clear {guildsData::teleportation::%player%}
@@ -1009,12 +1015,13 @@ command /g [<text>] [<text>] [<text>]:
                 stop
             #teleportuj
             load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
-            set {_loc} to yaml value "center" from "%{_g}%.guild"
+            set {_loc} to yaml value "base" from "%{_g}%.guild"
             unload yaml "%{_g}%.guild"
             set {_loc::*} to split {_loc} at ", "
-            loop 3 times:
-                set {_loc::%loop-value%} to {_loc::%loop-value%} parsed as number
-            set {_loc} to location({_loc::1}, {_loc::2}, {_loc::3}, world "world")
+            loop 6 times:
+                if loop-value is not 4:
+                    set {_loc::%loop-value%} to {_loc::%loop-value%} parsed as number
+            set {_loc} to location({_loc::1}, {_loc::2}, {_loc::3}, world "%{_loc::4}%", {_loc::5}, {_loc::6})
             teleport player to {_loc}
             clear {guildsData::teleportation::%player%}
             set {_msg} to prefixed({guilds::messages::base-teleportation-successed})
@@ -1179,6 +1186,43 @@ command /g [<text>] [<text>] [<text>]:
             replace all "{TAG}" with {_g} in {_msg}
             broadcast {_msg}
             stop
+        if arg-1 is "ustawbaze" or "ustawbaza":
+            #sprawdz czy gracza ma gildie
+            if player doesn't have guild:
+                set {_msg} to prefixed({guilds::messages::setbase-player-doesnt-have-guild})
+                send {_msg} to player
+                stop
+            set {_g} to player guild tag
+            #sprawdz czy to jest na terenie jego gildii
+            if "%region at player's location%" doesn't contain "guild-%{_g}%":
+                set {_msg} to prefixed({guilds::messages::setbase-player-is-not-in-guild-region})
+                send {_msg} to player
+                stop
+            #sprawdz czy ma dostep jest liderem/zastepca
+            set {_perm} to false
+            if player is owner:
+                set {_perm} to true
+            if {_perm} is false:
+                load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+                set {_deputies::*} to yaml list "deputies" from "%{_g}%.guild"
+                unload yaml "%{_g}%.guild"
+                loop {_deputies::*}:
+                    if loop-value is player's name:
+                        set {_perm} to true
+                        stop loop
+            if {_perm} is false:
+                set {_msg} to prefixed({guilds::messages::setbase-player-doesnt-have-permission})
+                send {_msg} to player
+                stop
+            #ustaw baze
+            load yaml "plugins/guilds/data/guilds/%{_g}%.yml" as "%{_g}%.guild"
+            set yaml value "base" from "%{_g}%.guild" to "%x-coordinate of player's location%, %y-coordinate of player's location%, %z-coordinate of player's location%, %player's world%, %player's yaw%, %player's pitch%"
+            save yaml "%{_g}%.guild"
+            unload yaml "%{_g}%.guild"
+            set {_msg} to prefixed({guilds::messages::setbase-base-set-successed})
+            replace all "{TAG}" with {_g} in {_msg}
+            send {_msg} to player
+            stop
 
 command /ga [<text>]:
     permission: ga.usage
@@ -1337,5 +1381,4 @@ on damage of end crystal:
                 delete victim
                 clear {guildsData::%uuid of victim%::value}
                 broadcast {_msg}
-                stop
             stop
