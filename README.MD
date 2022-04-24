@@ -1,4 +1,10 @@
-too hard for me... tablist destoryed me
+**too hard for me... tablist destoryed me**
+
+
+
+
+
+
 
 Wymagane pluginy: skript-reflect, skript-yaml, ShoSK, TAB
 
